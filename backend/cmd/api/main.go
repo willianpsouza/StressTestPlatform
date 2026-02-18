@@ -75,7 +75,7 @@ func main() {
 	authService := app.NewAuthService(cfg.JWT, userRepo, sessionRepo)
 	domainService := app.NewDomainService(domainRepo)
 	testService := app.NewTestService(testRepo, domainRepo, cfg.K6)
-	execService := app.NewExecutionService(execRepo, testRepo, k6Runner)
+	execService := app.NewExecutionService(execRepo, testRepo, metricRepo, k6Runner)
 	scheduleService := app.NewScheduleService(scheduleRepo, testRepo)
 
 	// Scheduler
@@ -170,6 +170,10 @@ func main() {
 			r.Get("/executions/{id}", execHandler.Get)
 			r.Post("/executions/{id}/cancel", execHandler.Cancel)
 			r.Get("/executions/{id}/logs", execHandler.Logs)
+			r.Delete("/executions/{id}", execHandler.Delete)
+
+			// Delete all finished executions for a test
+			r.Delete("/tests/{id}/executions", execHandler.DeleteByTest)
 
 			// Schedules
 			r.Get("/schedules", scheduleHandler.List)

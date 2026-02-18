@@ -107,6 +107,41 @@ func (h *ExecutionHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, map[string]string{"message": "Execution cancelled"})
 }
 
+func (h *ExecutionHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "Invalid execution ID")
+		return
+	}
+
+	if err := h.execService.Delete(id, claims.UserID, claims.Role == domain.UserRoleRoot); err != nil {
+		response.Error(w, err)
+		return
+	}
+
+	response.NoContent(w)
+}
+
+func (h *ExecutionHandler) DeleteByTest(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+
+	testID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "Invalid test ID")
+		return
+	}
+
+	deleted, err := h.execService.DeleteByTestID(testID, claims.UserID, claims.Role == domain.UserRoleRoot)
+	if err != nil {
+		response.Error(w, err)
+		return
+	}
+
+	response.OK(w, map[string]int64{"deleted": deleted})
+}
+
 func (h *ExecutionHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
 

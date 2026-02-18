@@ -107,6 +107,18 @@ export default function TestDetailPage() {
     if (res.success) router.push('/tests')
   }
 
+  const handleDeleteExecution = async (execId: string) => {
+    if (!confirm('Apagar esta execucao e suas metricas?')) return
+    const res = await api.delete(`/executions/${execId}`)
+    if (res.success) loadExecutions()
+  }
+
+  const handleClearHistory = async () => {
+    if (!confirm('Apagar TODAS as execucoes finalizadas deste teste e suas metricas?')) return
+    const res = await api.delete<{ deleted: number }>(`/tests/${params.id}/executions`)
+    if (res.success) loadExecutions()
+  }
+
   if (!test) return <div className="text-gray-400">Carregando...</div>
 
   const grafanaUrl = `/grafana/d/k6-metrics?var-domain=${encodeURIComponent(test.domain_name || '')}&var-test=${encodeURIComponent(test.name)}`
@@ -259,7 +271,15 @@ export default function TestDetailPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Historico de Execucoes</h2>
-          <button onClick={loadExecutions} className="text-sm text-primary-600 hover:text-primary-700">Atualizar</button>
+          <div className="flex items-center space-x-3">
+            {executions.length > 0 && (
+              <button onClick={handleClearHistory}
+                className="text-sm text-red-600 hover:text-red-700 font-medium">
+                Limpar Historico
+              </button>
+            )}
+            <button onClick={loadExecutions} className="text-sm text-primary-600 hover:text-primary-700">Atualizar</button>
+          </div>
         </div>
         {executions.length === 0 ? (
           <div className="p-8 text-center text-gray-400">Nenhuma execucao</div>
@@ -287,9 +307,17 @@ export default function TestDetailPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">{exec.duration}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDate(exec.created_at)}</td>
                     <td className="px-6 py-4 text-sm">
-                      <Link href={`/executions/${exec.id}`} className="text-primary-600 hover:text-primary-700">
-                        Detalhes
-                      </Link>
+                      <div className="flex items-center space-x-3">
+                        <Link href={`/executions/${exec.id}`} className="text-primary-600 hover:text-primary-700">
+                          Detalhes
+                        </Link>
+                        {exec.status !== 'RUNNING' && exec.status !== 'PENDING' && (
+                          <button onClick={() => handleDeleteExecution(exec.id)}
+                            className="text-red-500 hover:text-red-700">
+                            Apagar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

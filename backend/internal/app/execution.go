@@ -7,20 +7,23 @@ import (
 )
 
 type ExecutionService struct {
-	execRepo domain.ExecutionRepository
-	testRepo domain.TestRepository
-	runner   *K6Runner
+	execRepo   domain.ExecutionRepository
+	testRepo   domain.TestRepository
+	metricRepo domain.MetricRepository
+	runner     *K6Runner
 }
 
 func NewExecutionService(
 	execRepo domain.ExecutionRepository,
 	testRepo domain.TestRepository,
+	metricRepo domain.MetricRepository,
 	runner *K6Runner,
 ) *ExecutionService {
 	return &ExecutionService{
-		execRepo: execRepo,
-		testRepo: testRepo,
-		runner:   runner,
+		execRepo:   execRepo,
+		testRepo:   testRepo,
+		metricRepo: metricRepo,
+		runner:     runner,
 	}
 }
 
@@ -96,6 +99,56 @@ func (s *ExecutionService) Cancel(id uuid.UUID, userID uuid.UUID, isRoot bool) e
 
 	s.runner.Cancel(exec.UserID, exec.ID)
 	return nil
+}
+
+func (s *ExecutionService) Delete(id uuid.UUID, userID uuid.UUID, isRoot bool) error {
+	exec, err := s.execRepo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if !isRoot && exec.UserID != userID {
+		return domain.NewForbiddenError("Access denied")
+	}
+	if exec.Status == domain.TestStatusRunning || exec.Status == domain.TestStatusPending {
+		return domain.NewValidationError(map[string]string{
+			"status": "Cannot delete running or pending executions",
+		})
+	}
+
+	// Delete associated metrics first
+	s.metricRepo.DeleteByExecution(exec.ID)
+
+	return s.execRepo.Delete(id)
+}
+
+func (s *ExecutionService) DeleteByTestID(testID uuid.UUID, userID uuid.UUID, isRoot bool) (int64, error) {
+	test, err := s.testRepo.GetByID(testID)
+	if err != nil {
+		return 0, err
+	}
+	if !isRoot && test.UserID != userID {
+		return 0, domain.NewForbiddenError("Access denied")
+	}
+
+	// Get all finished executions for this test to delete their metrics
+	filter := domain.ExecutionFilter{
+		TestID:     &testID,
+		Pagination: domain.Pagination{Page: 1, PageSize: 10000},
+	}
+	if !isRoot {
+		filter.UserID = &userID
+	}
+	execs, _, err := s.execRepo.List(filter)
+	if err != nil {
+		return 0, err
+	}
+	for _, e := range execs {
+		if e.Status != domain.TestStatusRunning && e.Status != domain.TestStatusPending {
+			s.metricRepo.DeleteByExecution(e.ID)
+		}
+	}
+
+	return s.execRepo.DeleteByTestID(testID)
 }
 
 func (s *ExecutionService) List(filter domain.ExecutionFilter) ([]domain.TestExecution, int64, error) {

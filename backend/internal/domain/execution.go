@@ -60,6 +60,8 @@ type ExecutionRepository interface {
 	Create(exec *TestExecution) error
 	GetByID(id uuid.UUID) (*TestExecution, error)
 	Update(exec *TestExecution) error
+	Delete(id uuid.UUID) error
+	DeleteByTestID(testID uuid.UUID) (int64, error)
 	List(filter ExecutionFilter) ([]TestExecution, int64, error)
 	CountRunningByUser(userID uuid.UUID) (int, error)
 	MarkOrphansAsFailed() (int, error)

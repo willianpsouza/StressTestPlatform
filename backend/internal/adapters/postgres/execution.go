@@ -154,6 +154,20 @@ func (r *ExecutionRepository) List(filter domain.ExecutionFilter) ([]domain.Test
 	return execs, total, nil
 }
 
+func (r *ExecutionRepository) Delete(id uuid.UUID) error {
+	_, err := r.db.Exec(context.Background(), `DELETE FROM test_executions WHERE id = $1`, id)
+	return err
+}
+
+func (r *ExecutionRepository) DeleteByTestID(testID uuid.UUID) (int64, error) {
+	tag, err := r.db.Exec(context.Background(),
+		`DELETE FROM test_executions WHERE test_id = $1 AND status::text NOT IN ('PENDING', 'RUNNING')`, testID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (r *ExecutionRepository) CountRunningByUser(userID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(context.Background(),
