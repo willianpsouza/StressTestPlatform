@@ -109,3 +109,9 @@ export interface DashboardStats {
   failed_today: number
   total_executions: number
 }
+
+export interface ServiceStatus {
+  name: string
+  status: 'ok' | 'warning' | 'error'
+  message?: string
+}

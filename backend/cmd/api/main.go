@@ -59,7 +59,6 @@ func main() {
 	// External clients
 	influxClient := influxdb.NewClient(cfg.InfluxDB)
 	grafanaClient := grafana.NewClient(cfg.Grafana)
-	_ = grafanaClient
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
@@ -68,6 +67,7 @@ func main() {
 	testRepo := postgres.NewTestRepository(dbPool)
 	execRepo := postgres.NewExecutionRepository(dbPool)
 	scheduleRepo := postgres.NewScheduleRepository(dbPool)
+	settingsRepo := postgres.NewSettingsRepository(dbPool)
 
 	// Cache
 	_ = redisadapter.NewCache(redisClient)
@@ -96,6 +96,8 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler(execService)
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
 	influxdbHandler := handlers.NewInfluxDBHandler(influxClient, testRepo)
+	servicesHandler := handlers.NewServicesHandler(dbPool, redisClient, influxClient, grafanaClient, settingsRepo)
+	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 
 	// Router
 	r := chi.NewRouter()
@@ -176,17 +178,23 @@ func main() {
 			r.Get("/dashboard/executions", dashboardHandler.ListExecutions)
 			r.Get("/dashboard/stats", dashboardHandler.Stats)
 
+			// Services health check
+			r.Get("/services/status", servicesHandler.CheckServices)
+
 			// InfluxDB bucket management
 			r.Get("/influxdb/buckets", influxdbHandler.ListBuckets)
 			r.Post("/influxdb/buckets/{name}/clear", influxdbHandler.ClearBucket)
 
-			// ROOT-only: user management
+			// ROOT-only: user management + system settings
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireRole("ROOT"))
 				r.Get("/users", authHandler.ListUsers)
 				r.Get("/users/{id}", authHandler.GetUser)
 				r.Put("/users/{id}", authHandler.UpdateUser)
 				r.Delete("/users/{id}", authHandler.DeleteUser)
+
+				r.Get("/settings", settingsHandler.GetAll)
+				r.Put("/settings", settingsHandler.Update)
 			})
 		})
 	})

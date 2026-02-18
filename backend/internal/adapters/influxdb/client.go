@@ -243,6 +243,24 @@ func (c *Client) getOrgID() (string, error) {
 	return c.orgID, nil
 }
 
-func (c *Client) URL() string  { return c.url }
+func (c *Client) URL() string   { return c.url }
 func (c *Client) Token() string { return c.token }
 func (c *Client) Org() string   { return c.org }
+
+func (c *Client) Ping() error {
+	req, err := http.NewRequest("GET", c.url+"/ping", nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("influxdb unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("influxdb returned status %d", resp.StatusCode)
+	}
+	return nil
+}

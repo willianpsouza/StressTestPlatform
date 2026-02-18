@@ -129,3 +129,44 @@ func (c *Client) GetDashboardURL(bucket string) string {
 func (c *Client) PublicURL() string {
 	return c.publicURL
 }
+
+func (c *Client) Ping() error {
+	req, err := http.NewRequest("GET", c.url+"/api/health", nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("grafana unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("grafana returned status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// PingWithToken tests connectivity using a service account token (Bearer auth).
+func (c *Client) PingWithToken(token string) error {
+	req, err := http.NewRequest("GET", c.url+"/api/org", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("grafana unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("grafana token invalid (401)")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("grafana returned status %d", resp.StatusCode)
+	}
+	return nil
+}
