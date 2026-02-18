@@ -863,6 +863,126 @@ WHERE d.name = $1`, name).Scan(
 }
 
 // ---------------------------------------------------------------------------
+// Execution List & Stats (Analytics)
+// ---------------------------------------------------------------------------
+
+type executionListItem struct {
+	ID          string     `json:"id"`
+	TestName    string     `json:"test_name"`
+	DomainName  string     `json:"domain_name"`
+	VUs         int        `json:"vus"`
+	Duration    string     `json:"duration"`
+	Status      string     `json:"status"`
+	StartedAt   *time.Time `json:"started_at"`
+	CompletedAt *time.Time `json:"completed_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+func handleExecutionList(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := "m:exec:list"
+		if cached, ok := cacheGet(rdb, key); ok {
+			writeJSON(w, cached)
+			return
+		}
+
+		rows, err := db.Query(r.Context(), `
+			SELECT e.id, t.name AS test_name, d.name AS domain_name,
+			       e.vus, e.duration, e.status, e.started_at, e.completed_at, e.created_at
+			FROM test_executions e
+			JOIN tests t ON t.id = e.test_id
+			JOIN domains d ON d.id = t.domain_id
+			WHERE e.status IN ('COMPLETED','FAILED')
+			ORDER BY e.created_at DESC
+			LIMIT 100`)
+		if err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		defer rows.Close()
+
+		result := make([]executionListItem, 0)
+		for rows.Next() {
+			var item executionListItem
+			if err := rows.Scan(&item.ID, &item.TestName, &item.DomainName,
+				&item.VUs, &item.Duration, &item.Status,
+				&item.StartedAt, &item.CompletedAt, &item.CreatedAt); err != nil {
+				writeError(w, 500, err.Error())
+				return
+			}
+			result = append(result, item)
+		}
+
+		data := marshal(result)
+		cacheSet(rdb, key, data)
+		writeJSON(w, data)
+	}
+}
+
+func handleExecutionStats(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			writeError(w, 400, "execution id is required")
+			return
+		}
+
+		key := fmt.Sprintf("m:exec:stats:%s", id)
+		if cached, ok := cacheGet(rdb, key); ok {
+			writeJSON(w, cached)
+			return
+		}
+
+		query := `
+WITH base AS (
+  SELECT * FROM k6_metrics WHERE execution_id = $1
+)
+SELECT
+  COALESCE((SELECT SUM(metric_value) FROM base WHERE metric_name = 'http_reqs'), 0) AS requests,
+  COALESCE((SELECT SUM(metric_value) FROM base WHERE metric_name = 'http_reqs' AND status NOT IN ('200','201')), 0) AS failures,
+  COALESCE((SELECT MAX(rps) FROM (
+    SELECT SUM(metric_value) / 5 AS rps
+    FROM base WHERE metric_name = 'http_reqs'
+    GROUP BY floor(extract(epoch FROM timestamp) / 5)
+  ) sub), 0) AS peak_rps,
+  COALESCE((SELECT SUM(CASE WHEN status NOT IN ('200','201') THEN metric_value ELSE 0 END) * 100.0
+    / NULLIF(SUM(metric_value), 0)
+    FROM base WHERE metric_name = 'http_reqs'), 0) AS error_rate,
+  COALESCE((SELECT AVG(metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS avg_response,
+  COALESCE((SELECT PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS p90,
+  COALESCE((SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS p95,
+  COALESCE((SELECT MAX(metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS max_response,
+  COALESCE((SELECT MAX(metric_value) FROM base WHERE metric_name = 'vus_max'), 0) AS vus_max`
+
+		var s statsRow
+		err := db.QueryRow(r.Context(), query, id).Scan(
+			&s.Requests, &s.Failures, &s.PeakRPS, &s.ErrorRate,
+			&s.AvgResponse, &s.P90, &s.P95, &s.MaxResponse, &s.VusMax,
+		)
+		if err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+
+		if s.VusMax > 0 {
+			s.ReqPerVU = s.Requests / s.VusMax
+		}
+
+		s.PeakRPS = math.Round(s.PeakRPS*100) / 100
+		s.ErrorRate = math.Round(s.ErrorRate*100) / 100
+		s.AvgResponse = math.Round(s.AvgResponse*100) / 100
+		s.P90 = math.Round(s.P90*100) / 100
+		s.P95 = math.Round(s.P95*100) / 100
+		s.MaxResponse = math.Round(s.MaxResponse*100) / 100
+		s.ReqPerVU = math.Round(s.ReqPerVU*100) / 100
+
+		data := marshal(s)
+		cacheSet(rdb, key, data)
+		writeJSON(w, data)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -932,6 +1052,10 @@ func main() {
 	// Frontend dashboard
 	r.Get("/dashboard/overview", handleDashboardOverview(dbPool, rdb))
 	r.Get("/dashboard/domain", handleDashboardDomain(dbPool, rdb))
+
+	// Execution analytics
+	r.Get("/executions/list", handleExecutionList(dbPool, rdb))
+	r.Get("/executions/{id}/stats", handleExecutionStats(dbPool, rdb))
 
 	// Server
 	srv := &http.Server{

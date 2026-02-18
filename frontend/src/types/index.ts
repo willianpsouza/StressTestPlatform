@@ -124,3 +124,28 @@ export interface K6Overview {
   p95_response_ms: number
   total_data_points: number
 }
+
+export interface ExecutionListItem {
+  id: string
+  test_name: string
+  domain_name: string
+  vus: number
+  duration: string
+  status: string
+  started_at: string
+  completed_at: string
+  created_at: string
+}
+
+export interface ExecutionStats {
+  requests: number
+  failures: number
+  peak_rps: number
+  error_rate: number
+  avg_response: number
+  p90: number
+  p95: number
+  max_response: number
+  vus_max: number
+  req_per_vu: number
+}
