@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS test_executions;
+DROP TABLE IF EXISTS tests;
+DROP TABLE IF EXISTS domains;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;
+
+DROP TYPE IF EXISTS schedule_status;
+DROP TYPE IF EXISTS schedule_type;
+DROP TYPE IF EXISTS test_status;
+DROP TYPE IF EXISTS user_status;
+DROP TYPE IF EXISTS user_role;
