@@ -121,7 +121,7 @@ export default function TestDetailPage() {
 
   if (!test) return <div className="text-gray-400">Carregando...</div>
 
-  const grafanaUrl = `/grafana/d/k6-metrics?var-domain=${encodeURIComponent(test.domain_name || '')}&var-test=${encodeURIComponent(test.name)}`
+  const grafanaUrl = `/grafana/d/k6-metrics/k6-stress-test-dashboard?orgId=1&from=now-1h&to=now&timezone=browser&var-domain=${encodeURIComponent(test.domain_name || '')}&var-test=${encodeURIComponent(test.name)}&var-interval_value=5&refresh=10s`
 
   return (
     <div>
