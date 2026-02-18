@@ -5,12 +5,6 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import { User } from '@/types'
 
-interface BucketInfo {
-  name: string
-  test_name: string
-  test_id: string
-}
-
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user)
 
@@ -20,7 +14,6 @@ export default function SettingsPage() {
       <ProfileSection user={user} />
       <PasswordSection />
       {user?.role === 'ROOT' && <GrafanaTokenSection />}
-      <InfluxDBSection />
     </div>
   )
 }
@@ -262,53 +255,3 @@ function GrafanaTokenSection() {
   )
 }
 
-function InfluxDBSection() {
-  const [buckets, setBuckets] = useState<BucketInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [clearing, setClearing] = useState<string | null>(null)
-
-  useEffect(() => {
-    api.get<BucketInfo[]>('/influxdb/buckets').then((res) => {
-      if (res.success && res.data) setBuckets(res.data)
-      setLoading(false)
-    })
-  }, [])
-
-  const handleClear = async (bucketName: string) => {
-    if (!confirm(`Limpar todos os dados do bucket "${bucketName}"? Esta acao nao pode ser desfeita.`)) return
-    setClearing(bucketName)
-    await api.post(`/influxdb/buckets/${bucketName}/clear`)
-    setClearing(null)
-  }
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">InfluxDB Buckets</h2>
-      <p className="text-sm text-gray-500 mb-4">Buckets de metricas associados aos seus testes.</p>
-
-      {loading ? (
-        <div className="text-gray-400 text-sm">Carregando...</div>
-      ) : buckets.length === 0 ? (
-        <div className="text-gray-400 text-sm">Nenhum bucket encontrado</div>
-      ) : (
-        <div className="space-y-3">
-          {buckets.map((b) => (
-            <div key={b.name} className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{b.name}</p>
-                <p className="text-xs text-gray-500">Teste: {b.test_name}</p>
-              </div>
-              <button
-                onClick={() => handleClear(b.name)}
-                disabled={clearing === b.name}
-                className="px-3 py-1 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 disabled:opacity-50"
-              >
-                {clearing === b.name ? 'Limpando...' : 'Limpar Dados'}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}

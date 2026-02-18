@@ -3,10 +3,15 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,30 +22,26 @@ import (
 )
 
 type K6Runner struct {
-	mu           sync.Mutex
-	running      map[uuid.UUID]map[uuid.UUID]context.CancelFunc // userID -> execID -> cancel
-	execRepo     domain.ExecutionRepository
-	testRepo     domain.TestRepository
-	influxURL    string
-	influxToken  string
-	influxOrg    string
-	k6Config     config.K6Config
+	mu         sync.Mutex
+	running    map[uuid.UUID]map[uuid.UUID]context.CancelFunc // userID -> execID -> cancel
+	execRepo   domain.ExecutionRepository
+	testRepo   domain.TestRepository
+	metricRepo domain.MetricRepository
+	k6Config   config.K6Config
 }
 
 func NewK6Runner(
 	execRepo domain.ExecutionRepository,
 	testRepo domain.TestRepository,
-	influxURL, influxToken, influxOrg string,
+	metricRepo domain.MetricRepository,
 	k6Config config.K6Config,
 ) *K6Runner {
 	return &K6Runner{
-		running:     make(map[uuid.UUID]map[uuid.UUID]context.CancelFunc),
-		execRepo:    execRepo,
-		testRepo:    testRepo,
-		influxURL:   influxURL,
-		influxToken: influxToken,
-		influxOrg:   influxOrg,
-		k6Config:    k6Config,
+		running:    make(map[uuid.UUID]map[uuid.UUID]context.CancelFunc),
+		execRepo:   execRepo,
+		testRepo:   testRepo,
+		metricRepo: metricRepo,
+		k6Config:   k6Config,
 	}
 }
 
@@ -119,15 +120,15 @@ func (r *K6Runner) execute(ctx context.Context, cancel context.CancelFunc, execu
 	execution.StartedAt = &now
 	r.execRepo.Update(execution)
 
-	// Build K6 command
-	influxOutput := fmt.Sprintf("experimental-influxdb=%s?org=%s&bucket=%s&token=%s",
-		r.influxURL, r.influxOrg, test.InfluxDBBucket, r.influxToken,
-	)
+	// CSV output file
+	csvPath := filepath.Join(os.TempDir(), fmt.Sprintf("k6-%s.csv", execution.ID))
+	defer os.Remove(csvPath)
 
+	// Build K6 command — output to CSV
 	cmd := exec.CommandContext(ctx, "k6", "run",
 		"--vus", strconv.Itoa(vus),
 		"--duration", dur.String(),
-		"--out", influxOutput,
+		"--out", "csv="+csvPath,
 		"--summary-trend-stats", "avg,min,med,max,p(90),p(95),p(99)",
 		test.ScriptPath,
 	)
@@ -174,11 +175,154 @@ func (r *K6Runner) execute(ctx context.Context, cancel context.CancelFunc, execu
 		execution.ExitCode = &code
 	}
 
+	// Import CSV metrics into PostgreSQL (even if test failed, partial data may exist)
+	if _, statErr := os.Stat(csvPath); statErr == nil {
+		imported, importErr := r.importCSVMetrics(csvPath, execution.ID, test.ID)
+		if importErr != nil {
+			log.Printf("[K6] Failed to import CSV metrics for execution %s: %v", execution.ID, importErr)
+		} else {
+			log.Printf("[K6] Imported %d metric rows for execution %s", imported, execution.ID)
+		}
+	}
+
 	if err := r.execRepo.Update(execution); err != nil {
 		log.Printf("[K6] Failed to update execution %s: %v", execution.ID, err)
 	}
 
 	log.Printf("[K6] Execution %s finished with status %s", execution.ID, execution.Status)
+}
+
+// importCSVMetrics parses the K6 CSV output and bulk inserts into PostgreSQL.
+// K6 CSV columns: metric_name,timestamp,metric_value,check,error,error_code,
+// expected_response,group,method,name,proto,scenario,service,status,subproto,tls_version,url,extra_tags
+func (r *K6Runner) importCSVMetrics(csvPath string, executionID, testID uuid.UUID) (int, error) {
+	f, err := os.Open(csvPath)
+	if err != nil {
+		return 0, fmt.Errorf("open csv: %w", err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.LazyQuotes = true
+	reader.FieldsPerRecord = -1 // variable fields
+
+	// Read header
+	header, err := reader.Read()
+	if err != nil {
+		return 0, fmt.Errorf("read csv header: %w", err)
+	}
+
+	// Map column names to indices
+	colIdx := make(map[string]int)
+	for i, name := range header {
+		colIdx[strings.TrimSpace(name)] = i
+	}
+
+	// Validate required columns
+	for _, col := range []string{"metric_name", "timestamp", "metric_value"} {
+		if _, ok := colIdx[col]; !ok {
+			return 0, fmt.Errorf("missing required column: %s", col)
+		}
+	}
+
+	var metrics []domain.K6Metric
+	total := 0
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue // skip malformed rows
+		}
+
+		metricName := getCol(record, colIdx, "metric_name")
+		if metricName == "" {
+			continue
+		}
+
+		// Parse timestamp (K6 outputs Unix epoch in microseconds)
+		tsStr := getCol(record, colIdx, "timestamp")
+		ts, err := parseK6Timestamp(tsStr)
+		if err != nil {
+			continue
+		}
+
+		// Parse metric value
+		valStr := getCol(record, colIdx, "metric_value")
+		val, err := strconv.ParseFloat(valStr, 64)
+		if err != nil {
+			continue
+		}
+
+		m := domain.K6Metric{
+			ExecutionID: executionID,
+			TestID:      testID,
+			MetricName:  metricName,
+			Timestamp:   ts,
+			MetricValue: val,
+		}
+
+		if v := getCol(record, colIdx, "method"); v != "" {
+			m.Method = &v
+		}
+		if v := getCol(record, colIdx, "status"); v != "" {
+			m.Status = &v
+		}
+		if v := getCol(record, colIdx, "url"); v != "" {
+			m.URL = &v
+		}
+		if v := getCol(record, colIdx, "scenario"); v != "" {
+			m.Scenario = &v
+		}
+
+		metrics = append(metrics, m)
+
+		// Flush in batches of 1000 to avoid memory buildup
+		if len(metrics) >= 1000 {
+			if err := r.metricRepo.BulkInsert(metrics); err != nil {
+				return total, fmt.Errorf("bulk insert batch: %w", err)
+			}
+			total += len(metrics)
+			metrics = metrics[:0]
+		}
+	}
+
+	// Flush remaining
+	if len(metrics) > 0 {
+		if err := r.metricRepo.BulkInsert(metrics); err != nil {
+			return total, fmt.Errorf("bulk insert final batch: %w", err)
+		}
+		total += len(metrics)
+	}
+
+	return total, nil
+}
+
+func getCol(record []string, colIdx map[string]int, name string) string {
+	idx, ok := colIdx[name]
+	if !ok || idx >= len(record) {
+		return ""
+	}
+	return strings.TrimSpace(record[idx])
+}
+
+func parseK6Timestamp(s string) (time.Time, error) {
+	// K6 CSV outputs timestamp as Unix epoch in microseconds (integer)
+	us, err := strconv.ParseInt(s, 10, 64)
+	if err == nil {
+		// If > 1e15, it's microseconds; if > 1e12, milliseconds; otherwise seconds
+		if us > 1e15 {
+			return time.UnixMicro(us), nil
+		}
+		if us > 1e12 {
+			return time.UnixMilli(us), nil
+		}
+		return time.Unix(us, 0), nil
+	}
+	// Fallback: try RFC3339
+	return time.Parse(time.RFC3339, s)
 }
 
 func (r *K6Runner) cleanup(userID, execID uuid.UUID) {

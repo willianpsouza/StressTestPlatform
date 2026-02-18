@@ -28,10 +28,10 @@ func (r *TestRepository) Create(t *domain.Test) error {
 
 	_, err := r.db.Exec(context.Background(),
 		`INSERT INTO tests (id, domain_id, user_id, name, description, script_filename, script_path,
-			script_size_bytes, default_vus, default_duration, influxdb_bucket, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+			script_size_bytes, default_vus, default_duration, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		t.ID, t.DomainID, t.UserID, t.Name, t.Description, t.ScriptFilename, t.ScriptPath,
-		t.ScriptSizeBytes, t.DefaultVUs, t.DefaultDuration, t.InfluxDBBucket,
+		t.ScriptSizeBytes, t.DefaultVUs, t.DefaultDuration,
 		t.CreatedAt, t.UpdatedAt,
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *TestRepository) GetByID(id uuid.UUID) (*domain.Test, error) {
 	err := r.db.QueryRow(context.Background(),
 		`SELECT t.id, t.domain_id, t.user_id, t.name, t.description,
 			t.script_filename, t.script_path, t.script_size_bytes,
-			t.default_vus, t.default_duration, t.influxdb_bucket,
+			t.default_vus, t.default_duration,
 			t.created_at, t.updated_at, t.deleted_at,
 			d.name, u.name, u.email
 		FROM tests t
@@ -58,7 +58,7 @@ func (r *TestRepository) GetByID(id uuid.UUID) (*domain.Test, error) {
 	).Scan(
 		&t.ID, &t.DomainID, &t.UserID, &t.Name, &t.Description,
 		&t.ScriptFilename, &t.ScriptPath, &t.ScriptSizeBytes,
-		&t.DefaultVUs, &t.DefaultDuration, &t.InfluxDBBucket,
+		&t.DefaultVUs, &t.DefaultDuration,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt,
 		&t.DomainName, &t.UserName, &t.UserEmail,
 	)
@@ -76,13 +76,13 @@ func (r *TestRepository) GetByDomainAndName(domainID uuid.UUID, name string) (*d
 	err := r.db.QueryRow(context.Background(),
 		`SELECT id, domain_id, user_id, name, description,
 			script_filename, script_path, script_size_bytes,
-			default_vus, default_duration, influxdb_bucket,
+			default_vus, default_duration,
 			created_at, updated_at, deleted_at
 		FROM tests WHERE domain_id = $1 AND name = $2 AND deleted_at IS NULL`, domainID, name,
 	).Scan(
 		&t.ID, &t.DomainID, &t.UserID, &t.Name, &t.Description,
 		&t.ScriptFilename, &t.ScriptPath, &t.ScriptSizeBytes,
-		&t.DefaultVUs, &t.DefaultDuration, &t.InfluxDBBucket,
+		&t.DefaultVUs, &t.DefaultDuration,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt,
 	)
 	if err != nil {
@@ -149,7 +149,7 @@ func (r *TestRepository) List(filter domain.TestFilter) ([]domain.Test, int64, e
 	query := fmt.Sprintf(
 		`SELECT t.id, t.domain_id, t.user_id, t.name, t.description,
 			t.script_filename, t.script_path, t.script_size_bytes,
-			t.default_vus, t.default_duration, t.influxdb_bucket,
+			t.default_vus, t.default_duration,
 			t.created_at, t.updated_at, t.deleted_at,
 			d.name, u.name, u.email
 		FROM tests t
@@ -172,7 +172,7 @@ func (r *TestRepository) List(filter domain.TestFilter) ([]domain.Test, int64, e
 		if err := rows.Scan(
 			&t.ID, &t.DomainID, &t.UserID, &t.Name, &t.Description,
 			&t.ScriptFilename, &t.ScriptPath, &t.ScriptSizeBytes,
-			&t.DefaultVUs, &t.DefaultDuration, &t.InfluxDBBucket,
+			&t.DefaultVUs, &t.DefaultDuration,
 			&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt,
 			&t.DomainName, &t.UserName, &t.UserEmail,
 		); err != nil {

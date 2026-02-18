@@ -37,7 +37,6 @@ export interface Test {
   script_size_bytes: number
   default_vus: number
   default_duration: string
-  influxdb_bucket: string
   created_at: string
   updated_at: string
   domain_name?: string

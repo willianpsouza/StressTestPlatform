@@ -5,34 +5,29 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 
-	"github.com/willianpsouza/StressTestPlatform/internal/adapters/influxdb"
 	"github.com/willianpsouza/StressTestPlatform/internal/domain"
 	"github.com/willianpsouza/StressTestPlatform/internal/pkg/config"
 )
 
 type TestService struct {
-	testRepo      domain.TestRepository
-	domainRepo    domain.DomainRepository
-	influxClient  *influxdb.Client
-	k6Config      config.K6Config
+	testRepo   domain.TestRepository
+	domainRepo domain.DomainRepository
+	k6Config   config.K6Config
 }
 
 func NewTestService(
 	testRepo domain.TestRepository,
 	domainRepo domain.DomainRepository,
-	influxClient *influxdb.Client,
 	k6Config config.K6Config,
 ) *TestService {
 	return &TestService{
-		testRepo:     testRepo,
-		domainRepo:   domainRepo,
-		influxClient: influxClient,
-		k6Config:     k6Config,
+		testRepo:   testRepo,
+		domainRepo: domainRepo,
+		k6Config:   k6Config,
 	}
 }
 
@@ -73,9 +68,6 @@ func (s *TestService) Create(userID uuid.UUID, input domain.CreateTestInput, fil
 	// Generate test ID
 	testID := uuid.New()
 
-	// Generate InfluxDB bucket name
-	bucket := slugify(d.Name + "_" + input.Name)
-
 	// Save script to disk
 	scriptDir := filepath.Join(s.k6Config.ScriptsPath, userID.String(), d.ID.String())
 	if err := os.MkdirAll(scriptDir, 0755); err != nil {
@@ -93,12 +85,6 @@ func (s *TestService) Create(userID uuid.UUID, input domain.CreateTestInput, fil
 	if err != nil {
 		os.Remove(scriptPath)
 		return nil, fmt.Errorf("failed to write script file: %w", err)
-	}
-
-	// Create InfluxDB bucket
-	if err := s.influxClient.CreateBucket(bucket); err != nil {
-		os.Remove(scriptPath)
-		return nil, fmt.Errorf("failed to create InfluxDB bucket: %w", err)
 	}
 
 	// Set defaults
@@ -122,7 +108,6 @@ func (s *TestService) Create(userID uuid.UUID, input domain.CreateTestInput, fil
 		ScriptSizeBytes: written,
 		DefaultVUs:      vus,
 		DefaultDuration: duration,
-		InfluxDBBucket:  bucket,
 	}
 
 	if err := s.testRepo.Create(test); err != nil {
@@ -231,18 +216,49 @@ func (s *TestService) Delete(id uuid.UUID, userID uuid.UUID, isRoot bool) error 
 	return s.testRepo.Delete(id)
 }
 
-func (s *TestService) List(filter domain.TestFilter) ([]domain.Test, int64, error) {
-	return s.testRepo.List(filter)
+func (s *TestService) GetScriptContent(id uuid.UUID, userID uuid.UUID, isRoot bool) (string, error) {
+	t, err := s.testRepo.GetByID(id)
+	if err != nil {
+		return "", err
+	}
+	if !isRoot && t.UserID != userID {
+		return "", domain.NewForbiddenError("Access denied")
+	}
+
+	content, err := os.ReadFile(t.ScriptPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read script: %w", err)
+	}
+	return string(content), nil
 }
 
-var nonAlphaNum = regexp.MustCompile(`[^a-z0-9]+`)
-
-func slugify(s string) string {
-	lower := strings.ToLower(s)
-	slug := nonAlphaNum.ReplaceAllString(lower, "_")
-	slug = strings.Trim(slug, "_")
-	if len(slug) > 60 {
-		slug = slug[:60]
+func (s *TestService) SaveScriptContent(id uuid.UUID, userID uuid.UUID, isRoot bool, content string) (*domain.Test, error) {
+	t, err := s.testRepo.GetByID(id)
+	if err != nil {
+		return nil, err
 	}
-	return slug
+	if !isRoot && t.UserID != userID {
+		return nil, domain.NewForbiddenError("Access denied")
+	}
+
+	if len(content) > 1024*1024 {
+		return nil, domain.NewValidationError(map[string]string{
+			"content": "Script must be less than 1MB",
+		})
+	}
+
+	if err := os.WriteFile(t.ScriptPath, []byte(content), 0644); err != nil {
+		return nil, fmt.Errorf("failed to write script: %w", err)
+	}
+
+	t.ScriptSizeBytes = int64(len(content))
+	if err := s.testRepo.Update(t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+func (s *TestService) List(filter domain.TestFilter) ([]domain.Test, int64, error) {
+	return s.testRepo.List(filter)
 }

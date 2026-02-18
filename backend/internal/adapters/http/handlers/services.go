@@ -12,14 +12,12 @@ import (
 
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/grafana"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/http/response"
-	"github.com/willianpsouza/StressTestPlatform/internal/adapters/influxdb"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/postgres"
 )
 
 type ServicesHandler struct {
 	db           *pgxpool.Pool
 	redis        *redis.Client
-	influxClient *influxdb.Client
 	grafClient   *grafana.Client
 	settingsRepo *postgres.SettingsRepository
 }
@@ -27,14 +25,12 @@ type ServicesHandler struct {
 func NewServicesHandler(
 	db *pgxpool.Pool,
 	redis *redis.Client,
-	influxClient *influxdb.Client,
 	grafClient *grafana.Client,
 	settingsRepo *postgres.SettingsRepository,
 ) *ServicesHandler {
 	return &ServicesHandler{
 		db:           db,
 		redis:        redis,
-		influxClient: influxClient,
 		grafClient:   grafClient,
 		settingsRepo: settingsRepo,
 	}
@@ -64,13 +60,6 @@ func (h *ServicesHandler) CheckServices(w http.ResponseWriter, r *http.Request) 
 		services = append(services, serviceStatus{Name: "redis", Status: "error", Message: err.Error()})
 	} else {
 		services = append(services, serviceStatus{Name: "redis", Status: "ok"})
-	}
-
-	// InfluxDB
-	if err := h.influxClient.Ping(); err != nil {
-		services = append(services, serviceStatus{Name: "influxdb", Status: "error", Message: err.Error()})
-	} else {
-		services = append(services, serviceStatus{Name: "influxdb", Status: "ok"})
 	}
 
 	// Grafana — first try token from settings, then basic ping

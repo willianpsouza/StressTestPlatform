@@ -17,7 +17,6 @@ type Test struct {
 	ScriptSizeBytes int64      `json:"script_size_bytes"`
 	DefaultVUs      int        `json:"default_vus"`
 	DefaultDuration string     `json:"default_duration"`
-	InfluxDBBucket  string     `json:"influxdb_bucket"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	DeletedAt       *time.Time `json:"-"`

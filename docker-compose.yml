@@ -37,31 +37,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # InfluxDB 2.7
-  influxdb:
-    image: influxdb:2.7
-    container_name: stresstest-influxdb
-    environment:
-      DOCKER_INFLUXDB_INIT_MODE: setup
-      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
-      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-adminpassword123}
-      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-stresstest}
-      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-default}
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-dev-influxdb-token-change-in-production}
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb_data:/var/lib/influxdb2
-    networks:
-      - stresstest-internal
-    healthcheck:
-      test: ["CMD", "influx", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # Grafana OSS (subpath /grafana/)
+  # Grafana OSS (subpath /grafana/) with JSON API datasource plugin
   grafana:
     image: grafana/grafana-oss:latest
     container_name: stresstest-grafana
@@ -71,6 +47,7 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: marcusolsson-json-datasource
     ports:
       - "3001:3000"
     volumes:
@@ -78,9 +55,6 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - stresstest-internal
-    depends_on:
-      influxdb:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/grafana/api/health || exit 1"]
       interval: 10s
@@ -101,9 +75,6 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://stresstest:stresstest_secret@postgres:5432/stresstest?sslmode=disable}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
-      INFLUXDB_URL: ${INFLUXDB_URL:-http://influxdb:8086}
-      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-dev-influxdb-token-change-in-production}
-      INFLUXDB_ORG: ${INFLUXDB_ORG:-stresstest}
       GRAFANA_URL: ${GRAFANA_URL:-http://grafana:3000}
       GRAFANA_PUBLIC_URL: ${GRAFANA_PUBLIC_URL:-/grafana}
       GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
@@ -116,8 +87,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      influxdb:
         condition: service_healthy
     restart: unless-stopped
 
@@ -140,6 +109,21 @@ services:
       - stresstest-internal
     depends_on:
       - backend
+    restart: unless-stopped
+
+  # Dummy test API (target for K6 scripts)
+  dummy:
+    build:
+      context: ./testapi
+      dockerfile: Dockerfile
+    container_name: stresstest-dummy
+    networks:
+      - stresstest-internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8089/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
 
   # Nginx reverse proxy
@@ -205,6 +189,5 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  influxdb_data:
   grafana_data:
   k6_scripts:

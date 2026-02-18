@@ -12,7 +12,6 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	JWT      JWTConfig
-	InfluxDB InfluxDBConfig
 	Grafana  GrafanaConfig
 	K6       K6Config
 }
@@ -48,12 +47,6 @@ type JWTConfig struct {
 	Secret               string
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
-}
-
-type InfluxDBConfig struct {
-	URL   string
-	Token string
-	Org   string
 }
 
 type GrafanaConfig struct {
@@ -99,11 +92,6 @@ func Load() *Config {
 			Secret:               getEnv("JWT_SECRET", "dev-secret-change-in-production"),
 			AccessTokenDuration:  getEnvDuration("JWT_ACCESS_TOKEN_DURATION", 15*time.Minute),
 			RefreshTokenDuration: getEnvDuration("JWT_REFRESH_TOKEN_DURATION", 7*24*time.Hour),
-		},
-		InfluxDB: InfluxDBConfig{
-			URL:   getEnv("INFLUXDB_URL", "http://localhost:8086"),
-			Token: getEnv("INFLUXDB_TOKEN", ""),
-			Org:   getEnv("INFLUXDB_ORG", "stresstest"),
 		},
 		Grafana: GrafanaConfig{
 			URL:           getEnv("GRAFANA_URL", "http://localhost:3001"),

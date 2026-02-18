@@ -20,9 +20,7 @@ import (
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/grafana"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/http/handlers"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/http/middleware"
-	"github.com/willianpsouza/StressTestPlatform/internal/adapters/influxdb"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/postgres"
-	redisadapter "github.com/willianpsouza/StressTestPlatform/internal/adapters/redis"
 	"github.com/willianpsouza/StressTestPlatform/internal/app"
 	"github.com/willianpsouza/StressTestPlatform/internal/pkg/config"
 )
@@ -57,7 +55,6 @@ func main() {
 	log.Println("Connected to Redis")
 
 	// External clients
-	influxClient := influxdb.NewClient(cfg.InfluxDB)
 	grafanaClient := grafana.NewClient(cfg.Grafana)
 
 	// Repositories
@@ -68,18 +65,16 @@ func main() {
 	execRepo := postgres.NewExecutionRepository(dbPool)
 	scheduleRepo := postgres.NewScheduleRepository(dbPool)
 	settingsRepo := postgres.NewSettingsRepository(dbPool)
-
-	// Cache
-	_ = redisadapter.NewCache(redisClient)
+	metricRepo := postgres.NewMetricRepository(dbPool)
 
 	// K6 Runner
-	k6Runner := app.NewK6Runner(execRepo, testRepo, influxClient.URL(), influxClient.Token(), influxClient.Org(), cfg.K6)
+	k6Runner := app.NewK6Runner(execRepo, testRepo, metricRepo, cfg.K6)
 	k6Runner.RecoverOrphans()
 
 	// Services
 	authService := app.NewAuthService(cfg.JWT, userRepo, sessionRepo)
 	domainService := app.NewDomainService(domainRepo)
-	testService := app.NewTestService(testRepo, domainRepo, influxClient, cfg.K6)
+	testService := app.NewTestService(testRepo, domainRepo, cfg.K6)
 	execService := app.NewExecutionService(execRepo, testRepo, k6Runner)
 	scheduleService := app.NewScheduleService(scheduleRepo, testRepo)
 
@@ -95,9 +90,9 @@ func main() {
 	execHandler := handlers.NewExecutionHandler(execService)
 	dashboardHandler := handlers.NewDashboardHandler(execService)
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
-	influxdbHandler := handlers.NewInfluxDBHandler(influxClient, testRepo)
-	servicesHandler := handlers.NewServicesHandler(dbPool, redisClient, influxClient, grafanaClient, settingsRepo)
+	servicesHandler := handlers.NewServicesHandler(dbPool, redisClient, grafanaClient, settingsRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
+	metricsHandler := handlers.NewMetricsHandler(metricRepo, domainRepo, testRepo, redisClient)
 
 	// Router
 	r := chi.NewRouter()
@@ -133,6 +128,15 @@ func main() {
 			r.Post("/auth/refresh", authHandler.Refresh)
 		})
 
+		// Grafana API endpoints (no auth — internal network only)
+		r.Group(func(r chi.Router) {
+			r.Get("/grafana/domains", metricsHandler.ListDomains)
+			r.Get("/grafana/tests", metricsHandler.ListTests)
+			r.Get("/grafana/metrics", metricsHandler.ListMetricNames)
+			r.Get("/grafana/timeseries", metricsHandler.GetTimeseries)
+			r.Get("/grafana/summary", metricsHandler.GetSummary)
+		})
+
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
@@ -156,6 +160,8 @@ func main() {
 			r.Get("/tests/{id}", testHandler.Get)
 			r.Put("/tests/{id}", testHandler.Update)
 			r.Put("/tests/{id}/script", testHandler.UpdateScript)
+			r.Get("/tests/{id}/script/content", testHandler.GetScriptContent)
+			r.Put("/tests/{id}/script/content", testHandler.SaveScriptContent)
 			r.Delete("/tests/{id}", testHandler.Delete)
 
 			// Executions
@@ -180,10 +186,6 @@ func main() {
 
 			// Services health check
 			r.Get("/services/status", servicesHandler.CheckServices)
-
-			// InfluxDB bucket management
-			r.Get("/influxdb/buckets", influxdbHandler.ListBuckets)
-			r.Post("/influxdb/buckets/{name}/clear", influxdbHandler.ClearBucket)
 
 			// ROOT-only: user management + system settings
 			r.Group(func(r chi.Router) {

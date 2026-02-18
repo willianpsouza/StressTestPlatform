@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { api } from '@/lib/api'
 import { cn, formatDate, statusColors } from '@/lib/utils'
 import { Test, TestExecution } from '@/types'
+
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
 export default function TestDetailPage() {
   const params = useParams()
@@ -15,6 +18,14 @@ export default function TestDetailPage() {
   const [vus, setVus] = useState('')
   const [duration, setDuration] = useState('')
   const [running, setRunning] = useState(false)
+
+  // Script editor state
+  const [scriptContent, setScriptContent] = useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
+  const [originalContent, setOriginalContent] = useState('')
 
   useEffect(() => {
     api.get<Test>(`/tests/${params.id}`).then((res) => {
@@ -31,6 +42,50 @@ export default function TestDetailPage() {
     api.get<TestExecution[]>(`/executions?test_id=${params.id}&page_size=10`).then((res) => {
       if (res.success && res.data) setExecutions(res.data)
     })
+  }
+
+  const loadScript = useCallback(async () => {
+    const res = await api.get<{ content: string }>(`/tests/${params.id}/script/content`)
+    if (res.success && res.data) {
+      setScriptContent(res.data.content)
+      setOriginalContent(res.data.content)
+      setEditorDirty(false)
+    }
+  }, [params.id])
+
+  const handleToggleEditor = () => {
+    if (!editorOpen && scriptContent === null) {
+      loadScript()
+    }
+    setEditorOpen(!editorOpen)
+    setSaveMsg(null)
+  }
+
+  const handleSaveScript = async () => {
+    if (scriptContent === null) return
+    setSaving(true)
+    setSaveMsg(null)
+
+    const res = await api.put<Test>(`/tests/${params.id}/script/content`, {
+      content: scriptContent,
+    })
+
+    if (res.success && res.data) {
+      setTest(res.data)
+      setOriginalContent(scriptContent)
+      setEditorDirty(false)
+      setSaveMsg({ type: 'ok', text: 'Script salvo com sucesso' })
+    } else {
+      setSaveMsg({ type: 'error', text: res.error?.message || 'Falha ao salvar' })
+    }
+    setSaving(false)
+  }
+
+  const handleEditorChange = (value: string | undefined) => {
+    const v = value || ''
+    setScriptContent(v)
+    setEditorDirty(v !== originalContent)
+    setSaveMsg(null)
   }
 
   const handleRun = async () => {
@@ -54,7 +109,7 @@ export default function TestDetailPage() {
 
   if (!test) return <div className="text-gray-400">Carregando...</div>
 
-  const grafanaUrl = `/grafana/d/k6-metrics?var-bucket=${test.influxdb_bucket}`
+  const grafanaUrl = `/grafana/d/k6-metrics?var-domain=${encodeURIComponent(test.domain_name || '')}&var-test=${encodeURIComponent(test.name)}`
 
   return (
     <div>
@@ -103,6 +158,101 @@ export default function TestDetailPage() {
             Agendar
           </Link>
         </div>
+      </div>
+
+      {/* Script Editor */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+        <button
+          onClick={handleToggleEditor}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 rounded-t-xl"
+        >
+          <div className="flex items-center space-x-3">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            <h2 className="text-lg font-semibold text-gray-900">Editor de Script</h2>
+            {editorDirty && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                Nao salvo
+              </span>
+            )}
+          </div>
+          <svg className={cn('w-5 h-5 text-gray-400 transition-transform', editorOpen && 'rotate-180')}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {editorOpen && (
+          <div className="border-t border-gray-200">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <span className="text-xs font-medium text-gray-500 uppercase">
+                  {test.script_filename} ({test.script_size_bytes} bytes)
+                </span>
+                {saveMsg && (
+                  <span className={cn(
+                    'text-xs font-medium',
+                    saveMsg.type === 'ok' ? 'text-green-600' : 'text-red-600'
+                  )}>
+                    {saveMsg.text}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={loadScript}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Recarregar
+                </button>
+                <button
+                  onClick={handleSaveScript}
+                  disabled={saving || !editorDirty}
+                  className={cn(
+                    'px-4 py-1.5 text-xs font-medium rounded-lg',
+                    editorDirty
+                      ? 'bg-primary-600 text-white hover:bg-primary-700'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed',
+                    saving && 'opacity-50'
+                  )}
+                >
+                  {saving ? 'Salvando...' : 'Salvar Script'}
+                </button>
+              </div>
+            </div>
+
+            {/* Monaco Editor */}
+            {scriptContent === null ? (
+              <div className="p-8 text-center text-gray-400">Carregando script...</div>
+            ) : (
+              <MonacoEditor
+                height="500px"
+                language="javascript"
+                theme="vs-dark"
+                value={scriptContent}
+                onChange={handleEditorChange}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  wordWrap: 'on',
+                  formatOnPaste: true,
+                  formatOnType: true,
+                  suggestOnTriggerCharacters: true,
+                  quickSuggestions: true,
+                  bracketPairColorization: { enabled: true },
+                  padding: { top: 12 },
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Execution History */}

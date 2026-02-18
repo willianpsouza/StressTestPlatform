@@ -176,6 +176,50 @@ func (h *TestHandler) UpdateScript(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, test)
 }
 
+func (h *TestHandler) GetScriptContent(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "Invalid test ID")
+		return
+	}
+
+	content, err := h.testService.GetScriptContent(id, claims.UserID, claims.Role == domain.UserRoleRoot)
+	if err != nil {
+		response.Error(w, err)
+		return
+	}
+
+	response.OK(w, map[string]string{"content": content})
+}
+
+func (h *TestHandler) SaveScriptContent(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "Invalid test ID")
+		return
+	}
+
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		response.BadRequest(w, "Invalid request body")
+		return
+	}
+
+	test, err := h.testService.SaveScriptContent(id, claims.UserID, claims.Role == domain.UserRoleRoot, body.Content)
+	if err != nil {
+		response.Error(w, err)
+		return
+	}
+
+	response.OK(w, test)
+}
+
 func (h *TestHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
 
