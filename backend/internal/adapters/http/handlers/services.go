@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -83,6 +85,25 @@ func (h *ServicesHandler) CheckServices(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	services = append(services, grafStatus)
+
+	// Metrics API
+	metricsStatus := serviceStatus{Name: "metrics-api"}
+	metricsClient := &http.Client{Timeout: 3 * time.Second}
+	metricsResp, err := metricsClient.Get("http://metrics-api:8081/health")
+	if err != nil {
+		metricsStatus.Status = "error"
+		metricsStatus.Message = err.Error()
+	} else {
+		defer metricsResp.Body.Close()
+		var health struct{ Status string `json:"status"` }
+		if err := json.NewDecoder(metricsResp.Body).Decode(&health); err != nil || health.Status != "ok" {
+			metricsStatus.Status = "warning"
+			metricsStatus.Message = fmt.Sprintf("HTTP %d", metricsResp.StatusCode)
+		} else {
+			metricsStatus.Status = "ok"
+		}
+	}
+	services = append(services, metricsStatus)
 
 	// K6 Engine
 	k6Path, err := exec.LookPath("k6")
