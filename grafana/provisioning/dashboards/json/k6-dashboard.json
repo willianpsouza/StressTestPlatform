@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -12,7 +15,7 @@
       }
     ]
   },
-  "description": "K6 Stress Test Dashboard — Metrics API backed",
+  "description": "K6 Stress Test Dashboard \u2014 Metrics API backed",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -22,30 +25,56 @@
       "id": 1,
       "title": "Request Made",
       "type": "stat",
-      "gridPos": { "h": 10, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "requests", "text": "Requests", "type": "number" }
+            {
+              "selector": "requests",
+              "text": "Requests",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null },
-              { "color": "blue", "value": 0 }
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 0
+              }
             ]
           },
           "unit": "short"
@@ -57,7 +86,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -65,30 +100,56 @@
       "id": 2,
       "title": "HTTP Failures",
       "type": "stat",
-      "gridPos": { "h": 10, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "failures", "text": "Failures", "type": "number" }
+            {
+              "selector": "failures",
+              "text": "Failures",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
@@ -100,7 +161,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -108,29 +175,52 @@
       "id": 3,
       "title": "Peak RPS",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "peak_rps", "text": "Peak RPS", "type": "number" }
+            {
+              "selector": "peak_rps",
+              "text": "Peak RPS",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "purple", "value": null }
+              {
+                "color": "purple",
+                "value": null
+              }
             ]
           },
           "unit": "reqps"
@@ -142,7 +232,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -150,31 +246,60 @@
       "id": 4,
       "title": "Error Rate",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "error_rate", "text": "Error Rate", "type": "number" }
+            {
+              "selector": "error_rate",
+              "text": "Error Rate",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "unit": "percent",
@@ -187,7 +312,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -195,31 +326,60 @@
       "id": 5,
       "title": "Average Response Time",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "avg_response", "text": "Avg Response", "type": "number" }
+            {
+              "selector": "avg_response",
+              "text": "Avg Response",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 200 },
-              { "color": "red", "value": 500 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
             ]
           },
           "unit": "ms",
@@ -232,7 +392,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -240,31 +406,60 @@
       "id": 6,
       "title": "P90 Response",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 0 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "p90", "text": "P90", "type": "number" }
+            {
+              "selector": "p90",
+              "text": "P90",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 200 },
-              { "color": "red", "value": 500 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
             ]
           },
           "unit": "ms",
@@ -277,7 +472,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -285,29 +486,52 @@
       "id": 7,
       "title": "Request / VUS",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 5 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "req_per_vu", "text": "Req/VUS", "type": "number" }
+            {
+              "selector": "req_per_vu",
+              "text": "Req/VUS",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "orange", "value": null }
+              {
+                "color": "orange",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -320,7 +544,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -328,29 +558,52 @@
       "id": 8,
       "title": "VUS Max",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 5 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 15,
+        "y": 5
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "vus_max", "text": "VUS Max", "type": "number" }
+            {
+              "selector": "vus_max",
+              "text": "VUS Max",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           },
           "unit": "short"
@@ -362,7 +615,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -370,31 +629,60 @@
       "id": 9,
       "title": "Max Response Time",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 5 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 18,
+        "y": 5
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "max_response", "text": "Max Response", "type": "number" }
+            {
+              "selector": "max_response",
+              "text": "Max Response",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 500 },
-              { "color": "red", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
             ]
           },
           "unit": "ms",
@@ -407,7 +695,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -415,31 +709,60 @@
       "id": 10,
       "title": "P95 Response",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 5 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 21,
+        "y": 5
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "p95", "text": "P95", "type": "number" }
+            {
+              "selector": "p95",
+              "text": "P95",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 200 },
-              { "color": "red", "value": 500 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
             ]
           },
           "unit": "ms",
@@ -452,7 +775,13 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       }
     },
@@ -460,11 +789,22 @@
       "id": 11,
       "title": "ALL METRICS",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/all?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -472,19 +812,48 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "requests", "text": "Requests", "type": "number" },
-            { "selector": "rps", "text": "RPS", "type": "number" },
-            { "selector": "iterations", "text": "Iterations", "type": "number" },
-            { "selector": "response_time", "text": "Response Time", "type": "number" },
-            { "selector": "failures", "text": "Failures", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "requests",
+              "text": "Requests",
+              "type": "number"
+            },
+            {
+              "selector": "rps",
+              "text": "RPS",
+              "type": "number"
+            },
+            {
+              "selector": "iterations",
+              "text": "Iterations",
+              "type": "number"
+            },
+            {
+              "selector": "response_time",
+              "text": "Response Time",
+              "type": "number"
+            },
+            {
+              "selector": "failures",
+              "text": "Failures",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -495,11 +864,17 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false
           },
@@ -507,28 +882,58 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Response Time" },
+            "matcher": {
+              "id": "byName",
+              "options": "Response Time"
+            },
             "properties": [
-              { "id": "custom.axisPlacement", "value": "right" },
-              { "id": "unit", "value": "ms" }
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "ms"
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
       "id": 12,
       "title": "Histogram - Errors",
       "type": "timeseries",
-      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 20 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/errors?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -536,15 +941,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "errors", "text": "Errors", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "errors",
+              "text": "Errors",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "red", "mode": "fixed" },
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 50,
@@ -558,19 +977,38 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["sum"], "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 13,
       "title": "Histogram - Response Time",
       "type": "timeseries",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 25 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/response-histogram?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -578,15 +1016,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "avg_response", "text": "Avg Response Time", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "avg_response",
+              "text": "Avg Response Time",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "yellow", "mode": "fixed" },
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 40,
@@ -600,19 +1052,39 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 14,
       "title": "Requests",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 31 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/requests?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -620,15 +1092,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "requests", "text": "Requests", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "requests",
+              "text": "Requests",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "green", "mode": "fixed" },
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 20,
@@ -644,19 +1130,40 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max", "sum"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 15,
       "title": "Virtual Users",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 41 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/vus?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -664,15 +1171,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "vus", "text": "VUS", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "vus",
+              "text": "VUS",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 30,
@@ -688,19 +1209,39 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 16,
       "title": "Response Time",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 51 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/percentiles?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -708,17 +1249,38 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "median", "text": "Median", "type": "number" },
-            { "selector": "p90", "text": "P90", "type": "number" },
-            { "selector": "p95", "text": "P95", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "median",
+              "text": "Median",
+              "type": "number"
+            },
+            {
+              "selector": "p90",
+              "text": "P90",
+              "type": "number"
+            },
+            {
+              "selector": "p95",
+              "text": "P95",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 10,
@@ -732,35 +1294,92 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "P95" },
+            "matcher": {
+              "id": "byName",
+              "options": "P95"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
-              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "P90" },
+            "matcher": {
+              "id": "byName",
+              "options": "P90"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } },
-              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
       "id": 17,
       "title": "Request Per Second",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 61 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/rps?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -768,15 +1387,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "rps", "text": "RPS", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "rps",
+              "text": "RPS",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "super-light-green", "mode": "fixed" },
+          "color": {
+            "fixedColor": "super-light-green",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 20,
@@ -792,19 +1425,39 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 18,
       "title": "Iterations",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 71 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/iterations?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -812,15 +1465,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "iterations", "text": "Iterations", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "iterations",
+              "text": "Iterations",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "light-blue", "mode": "fixed" },
+          "color": {
+            "fixedColor": "light-blue",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 20,
@@ -836,19 +1503,39 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "sum"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 19,
       "title": "Requests per VU",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 81 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/ts/req-per-vu?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
@@ -856,15 +1543,29 @@
           "format": "timeseries",
           "root_selector": "",
           "columns": [
-            { "selector": "time", "text": "Time", "type": "timestamp" },
-            { "selector": "req_per_vu", "text": "Req/VU", "type": "number" }
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "req_per_vu",
+              "text": "Req/VU",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          },
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -879,139 +1580,302 @@
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       }
     },
     {
       "id": 20,
       "title": "HTTP REQUEST",
       "type": "table",
-      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 91 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 91
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/tables/http-requests?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "url", "text": "URL", "type": "string" },
-            { "selector": "method", "text": "Method", "type": "string" },
-            { "selector": "status", "text": "Status", "type": "string" },
-            { "selector": "count", "text": "Count", "type": "number" },
-            { "selector": "avg_ms", "text": "Avg (ms)", "type": "number" },
-            { "selector": "min_ms", "text": "Min (ms)", "type": "number" },
-            { "selector": "max_ms", "text": "Max (ms)", "type": "number" },
-            { "selector": "p90_ms", "text": "P90 (ms)", "type": "number" },
-            { "selector": "p95_ms", "text": "P95 (ms)", "type": "number" },
-            { "selector": "p99_ms", "text": "P99 (ms)", "type": "number" }
+            {
+              "selector": "url",
+              "text": "URL",
+              "type": "string"
+            },
+            {
+              "selector": "method",
+              "text": "Method",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "count",
+              "text": "Count",
+              "type": "number"
+            },
+            {
+              "selector": "avg_ms",
+              "text": "Avg (ms)",
+              "type": "number"
+            },
+            {
+              "selector": "min_ms",
+              "text": "Min (ms)",
+              "type": "number"
+            },
+            {
+              "selector": "max_ms",
+              "text": "Max (ms)",
+              "type": "number"
+            },
+            {
+              "selector": "p90_ms",
+              "text": "P90 (ms)",
+              "type": "number"
+            },
+            {
+              "selector": "p95_ms",
+              "text": "P95 (ms)",
+              "type": "number"
+            },
+            {
+              "selector": "p99_ms",
+              "text": "P99 (ms)",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": {
             "align": "auto",
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Count" },
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
             "properties": [
-              { "id": "custom.width", "value": 80 }
+              {
+                "id": "custom.width",
+                "value": 80
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Method" },
+            "matcher": {
+              "id": "byName",
+              "options": "Method"
+            },
             "properties": [
-              { "id": "custom.width", "value": 70 }
+              {
+                "id": "custom.width",
+                "value": 70
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Status" },
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
             "properties": [
-              { "id": "custom.width", "value": 70 }
+              {
+                "id": "custom.width",
+                "value": 70
+              }
             ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Count" }],
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ],
         "cellHeight": "sm",
-        "footer": { "show": false }
+        "footer": {
+          "show": false
+        }
       }
     },
     {
       "id": 21,
       "title": "Error Detail",
       "type": "table",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 102 },
-      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 102
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "stresstest-metrics-api"
+      },
       "targets": [
         {
-          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "stresstest-metrics-api"
+          },
           "type": "json",
           "source": "url",
           "url": "http://metrics-api:8081/grafana/tables/errors?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}",
           "parser": "backend",
           "root_selector": "",
           "columns": [
-            { "selector": "url", "text": "URL", "type": "string" },
-            { "selector": "method", "text": "Method", "type": "string" },
-            { "selector": "status", "text": "Status", "type": "string" },
-            { "selector": "count", "text": "Count", "type": "number" }
+            {
+              "selector": "url",
+              "text": "URL",
+              "type": "string"
+            },
+            {
+              "selector": "method",
+              "text": "Method",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "count",
+              "text": "Count",
+              "type": "number"
+            }
           ],
-          "refId": "A"
+          "refId": "A",
+          "url_options": {
+            "method": "GET"
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
           "custom": {
             "align": "auto",
-            "cellOptions": { "type": "auto" },
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Count" },
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
             "properties": [
-              { "id": "custom.width", "value": 80 }
+              {
+                "id": "custom.width",
+                "value": 80
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Status" },
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
             "properties": [
-              { "id": "custom.width", "value": 70 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+              {
+                "id": "custom.width",
+                "value": 70
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
             ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Count" }],
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ],
         "cellHeight": "sm",
-        "footer": { "show": false }
+        "footer": {
+          "show": false
+        }
       }
     }
   ],
   "refresh": "10s",
   "schemaVersion": 41,
-  "tags": ["k6", "stress-test", "load-testing"],
+  "tags": [
+    "k6",
+    "stress-test",
+    "load-testing"
+  ],
   "templating": {
     "list": [
       {
-        "current": { "selected": true, "text": "All", "value": "$__all" },
-        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "stresstest-metrics-api"
+        },
         "definition": "",
         "includeAll": true,
         "label": "Domain",
@@ -1024,16 +1888,30 @@
           "url": "http://metrics-api:8081/grafana/variables/domains",
           "root_selector": "",
           "columns": [
-            { "selector": "", "text": "", "type": "string" }
-          ]
+            {
+              "selector": "",
+              "text": "",
+              "type": "string"
+            }
+          ],
+          "url_options": {
+            "method": "GET"
+          }
         },
         "refresh": 2,
         "sort": 1,
         "type": "query"
       },
       {
-        "current": { "selected": true, "text": "All", "value": "$__all" },
-        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "stresstest-metrics-api"
+        },
         "definition": "",
         "includeAll": true,
         "label": "Test",
@@ -1046,33 +1924,82 @@
           "url": "http://metrics-api:8081/grafana/variables/tests?domain=${domain}",
           "root_selector": "",
           "columns": [
-            { "selector": "", "text": "", "type": "string" }
-          ]
+            {
+              "selector": "",
+              "text": "",
+              "type": "string"
+            }
+          ],
+          "url_options": {
+            "method": "GET"
+          }
         },
         "refresh": 2,
         "sort": 1,
         "type": "query"
       },
       {
-        "current": { "selected": true, "text": "5", "value": "5" },
+        "current": {
+          "selected": true,
+          "text": "5",
+          "value": "5"
+        },
         "label": "Interval (s)",
         "name": "interval_value",
         "options": [
-          { "selected": false, "text": "3", "value": "3" },
-          { "selected": true, "text": "5", "value": "5" },
-          { "selected": false, "text": "10", "value": "10" },
-          { "selected": false, "text": "30", "value": "30" },
-          { "selected": false, "text": "60", "value": "60" }
+          {
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": true,
+            "text": "5",
+            "value": "5"
+          },
+          {
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": false,
+            "text": "30",
+            "value": "30"
+          },
+          {
+            "selected": false,
+            "text": "60",
+            "value": "60"
+          }
         ],
         "query": "3,5,10,30,60",
         "type": "custom"
       }
     ]
   },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
-    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d"
+    ]
   },
   "timezone": "browser",
   "title": "K6 Stress Test Dashboard",
