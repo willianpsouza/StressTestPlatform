@@ -37,5 +37,5 @@ k6_scripts/
 # Logs
 *.log
 
-# Temp/manual exports
-dashboards/
+# Temp/manual exports (old InfluxDB dashboards)
+/dashboards/

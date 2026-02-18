@@ -37,7 +37,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Grafana OSS (subpath /grafana/) with JSON API datasource plugin
+  # Grafana OSS (subpath /grafana/) with PostgreSQL datasource
   grafana:
     image: grafana/grafana-oss:latest
     container_name: stresstest-grafana
@@ -47,7 +47,12 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_INSTALL_PLUGINS: marcusolsson-json-datasource
+      # PostgreSQL credentials for provisioned datasource
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-stresstest}
+      POSTGRES_USER: ${POSTGRES_USER:-stresstest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stresstest_secret}
     ports:
       - "3001:3000"
     volumes:
@@ -55,6 +60,9 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
     networks:
       - stresstest-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/grafana/api/health || exit 1"]
       interval: 10s

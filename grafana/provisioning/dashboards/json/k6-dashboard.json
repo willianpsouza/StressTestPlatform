@@ -1,0 +1,975 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "K6 Stress Test Dashboard — PostgreSQL backed",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Made",
+      "type": "stat",
+      "gridPos": { "h": 10, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "blue", "value": 0 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "HTTP Failures",
+      "type": "stat",
+      "gridPos": { "h": 10, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(SUM(m.metric_value), 0) AS \"Failures\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Peak RPS",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT MAX(rps) AS \"Peak RPS\" FROM (SELECT SUM(m.metric_value) / ${interval_value} AS rps FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY floor(extract(epoch FROM m.timestamp) / ${interval_value})) sub",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Error Rate",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(SUM(CASE WHEN m.status NOT IN ('200', '201') THEN m.metric_value ELSE 0 END) * 100.0 / NULLIF(SUM(m.metric_value), 0), 0) AS \"Error Rate\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Average Response Time",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT AVG(m.metric_value) AS \"Avg Response\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "title": "P90 Response",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value) AS \"P90\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Request / VUS",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE((SELECT SUM(mm.metric_value) FROM k6_metrics mm JOIN tests tt ON tt.id = mm.test_id JOIN domains dd ON dd.id = tt.domain_id WHERE dd.name = '${domain}' AND tt.name = '${test}' AND mm.metric_name = 'http_reqs' AND $__timeFilter(mm.timestamp)) / NULLIF((SELECT MAX(mm.metric_value) FROM k6_metrics mm JOIN tests tt ON tt.id = mm.test_id JOIN domains dd ON dd.id = tt.domain_id WHERE dd.name = '${domain}' AND tt.name = '${test}' AND mm.metric_name = 'vus_max' AND $__timeFilter(mm.timestamp)), 0), 0) AS \"Req/VUS\"",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null }
+            ]
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 8,
+      "title": "VUS Max",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT MAX(m.metric_value) AS \"VUS Max\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus_max' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Max Response Time",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT MAX(m.metric_value) AS \"Max Response\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 10,
+      "title": "P95 Response",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value) AS \"P95\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 11,
+      "title": "ALL METRICS",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) / ${interval_value} AS \"RPS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Iterations\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'iterations' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Response Time\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "D"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, COALESCE(SUM(m.metric_value), 0) AS \"Failures\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "E"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Response Time" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "ms" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Histogram - Errors",
+      "type": "timeseries",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, COALESCE(SUM(m.metric_value), 0) AS \"Errors\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Histogram - Response Time",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 25 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Avg Response Time\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "yellow", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 40,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Requests",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 31 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "green", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max", "sum"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Virtual Users",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 41 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"VUS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Response Time",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 51 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Median\", PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value) AS \"P90\", PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value) AS \"P95\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "P95" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "P90" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } },
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 17,
+      "title": "Request Per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 61 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) / ${interval_value} AS \"RPS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "super-light-green", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 18,
+      "title": "Iterations",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 71 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Iterations\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'iterations' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "light-blue", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "sum"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 19,
+      "title": "Requests per VU",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 81 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT r.time, COALESCE(r.reqs / NULLIF(v.vus, 0), 0) AS \"Req/VU\" FROM (SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS reqs FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1) r LEFT JOIN (SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, MAX(m.metric_value) AS vus FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus' AND $__timeFilter(m.timestamp) GROUP BY 1) v ON r.time = v.time ORDER BY r.time",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 20,
+      "title": "HTTP REQUEST",
+      "type": "table",
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 91 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(m.url, 'N/A') AS \"URL\", COALESCE(m.method, 'N/A') AS \"Method\", COALESCE(m.status, 'N/A') AS \"Status\", COUNT(*) AS \"Count\", ROUND(AVG(m.metric_value)::numeric, 2) AS \"Avg (ms)\", ROUND(MIN(m.metric_value)::numeric, 2) AS \"Min (ms)\", ROUND(MAX(m.metric_value)::numeric, 2) AS \"Max (ms)\", ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P90 (ms)\", ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P95 (ms)\", ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P99 (ms)\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY m.url, m.method, m.status ORDER BY \"Count\" DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Count" },
+            "properties": [
+              { "id": "custom.width", "value": 80 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Method" },
+            "properties": [
+              { "id": "custom.width", "value": 70 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              { "id": "custom.width", "value": 70 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Count" }],
+        "cellHeight": "sm",
+        "footer": { "show": false }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Error Detail",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 102 },
+      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(m.url, 'N/A') AS \"URL\", COALESCE(m.method, 'N/A') AS \"Method\", m.status AS \"Status\", SUM(m.metric_value)::int AS \"Count\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY m.url, m.method, m.status ORDER BY \"Count\" DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Count" },
+            "properties": [
+              { "id": "custom.width", "value": 80 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              { "id": "custom.width", "value": 70 },
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Count" }],
+        "cellHeight": "sm",
+        "footer": { "show": false }
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["k6", "stress-test", "load-testing"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+        "definition": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id JOIN k6_metrics m ON m.test_id = t.id ORDER BY d.name",
+        "includeAll": true,
+        "label": "Domain",
+        "multi": false,
+        "name": "domain",
+        "query": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id JOIN k6_metrics m ON m.test_id = t.id ORDER BY d.name",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+        "definition": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id JOIN k6_metrics m ON m.test_id = t.id WHERE d.name = '${domain}' ORDER BY t.name",
+        "includeAll": true,
+        "label": "Test",
+        "multi": false,
+        "name": "test",
+        "query": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id JOIN k6_metrics m ON m.test_id = t.id WHERE d.name = '${domain}' ORDER BY t.name",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": { "selected": true, "text": "5", "value": "5" },
+        "label": "Interval (s)",
+        "name": "interval_value",
+        "options": [
+          { "selected": false, "text": "3", "value": "3" },
+          { "selected": true, "text": "5", "value": "5" },
+          { "selected": false, "text": "10", "value": "10" },
+          { "selected": false, "text": "30", "value": "30" },
+          { "selected": false, "text": "60", "value": "60" }
+        ],
+        "query": "3,5,10,30,60",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+  },
+  "timezone": "browser",
+  "title": "K6 Stress Test Dashboard",
+  "uid": "k6-metrics",
+  "weekStart": "monday"
+}
