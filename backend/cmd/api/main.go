@@ -67,6 +67,7 @@ func main() {
 	domainRepo := postgres.NewDomainRepository(dbPool)
 	testRepo := postgres.NewTestRepository(dbPool)
 	execRepo := postgres.NewExecutionRepository(dbPool)
+	scheduleRepo := postgres.NewScheduleRepository(dbPool)
 
 	// Cache
 	_ = redisadapter.NewCache(redisClient)
@@ -80,6 +81,11 @@ func main() {
 	domainService := app.NewDomainService(domainRepo)
 	testService := app.NewTestService(testRepo, domainRepo, influxClient, cfg.K6)
 	execService := app.NewExecutionService(execRepo, testRepo, k6Runner)
+	scheduleService := app.NewScheduleService(scheduleRepo, testRepo)
+
+	// Scheduler
+	scheduler := app.NewScheduler(scheduleRepo, execRepo, k6Runner)
+	scheduler.Start()
 
 	// Handlers
 	healthHandler := handlers.NewHealthHandler(dbPool, redisClient, cfg)
@@ -88,6 +94,7 @@ func main() {
 	testHandler := handlers.NewTestHandler(testService)
 	execHandler := handlers.NewExecutionHandler(execService)
 	dashboardHandler := handlers.NewDashboardHandler(execService)
+	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
 
 	// Router
 	r := chi.NewRouter()
@@ -155,6 +162,15 @@ func main() {
 			r.Post("/executions/{id}/cancel", execHandler.Cancel)
 			r.Get("/executions/{id}/logs", execHandler.Logs)
 
+			// Schedules
+			r.Get("/schedules", scheduleHandler.List)
+			r.Post("/schedules", scheduleHandler.Create)
+			r.Get("/schedules/{id}", scheduleHandler.Get)
+			r.Put("/schedules/{id}", scheduleHandler.Update)
+			r.Delete("/schedules/{id}", scheduleHandler.Delete)
+			r.Post("/schedules/{id}/pause", scheduleHandler.Pause)
+			r.Post("/schedules/{id}/resume", scheduleHandler.Resume)
+
 			// Dashboard (all users see all executions)
 			r.Get("/dashboard/executions", dashboardHandler.ListExecutions)
 			r.Get("/dashboard/stats", dashboardHandler.Stats)
@@ -192,6 +208,8 @@ func main() {
 
 	<-done
 	log.Println("Shutting down server...")
+
+	scheduler.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
