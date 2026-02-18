@@ -65,7 +65,7 @@ export default function UsersPage() {
       closeModal()
       fetchUsers()
     } else {
-      setError(res.error?.message || 'Erro ao criar usuario')
+      setError(res.error?.message || 'Failed to create user')
     }
   }
 
@@ -79,7 +79,7 @@ export default function UsersPage() {
       closeModal()
       fetchUsers()
     } else {
-      setError(res.error?.message || 'Erro ao atualizar usuario')
+      setError(res.error?.message || 'Failed to update user')
     }
   }
 
@@ -93,36 +93,36 @@ export default function UsersPage() {
       closeModal()
       fetchUsers()
     } else {
-      setError(res.error?.message || 'Erro ao remover usuario')
+      setError(res.error?.message || 'Failed to remove user')
     }
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
         <button
           onClick={openCreate}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
         >
-          Novo Usuario
+          New User
         </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Carregando...</div>
+          <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ultimo Login</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acoes</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -152,14 +152,14 @@ export default function UsersPage() {
                         onClick={() => openEdit(user)}
                         className="text-sm text-primary-600 hover:text-primary-800 font-medium"
                       >
-                        Editar
+                        Edit
                       </button>
                       {user.id !== currentUser?.id && (
                         <button
                           onClick={() => openDelete(user)}
                           className="text-sm text-red-600 hover:text-red-800 font-medium"
                         >
-                          Remover
+                          Remove
                         </button>
                       )}
                     </td>
@@ -179,11 +179,11 @@ export default function UsersPage() {
           {/* Create Modal */}
           {modal === 'create' && (
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 z-10">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Novo Usuario</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">New User</h2>
               {error && <p className="mb-3 text-sm text-red-600 bg-red-50 rounded-lg p-3">{error}</p>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={createForm.name}
@@ -201,7 +201,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                   <input
                     type="password"
                     value={createForm.password}
@@ -210,7 +210,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
                   <input
                     type="password"
                     value={createForm.confirm_password}
@@ -221,10 +221,10 @@ export default function UsersPage() {
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button onClick={closeModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                  Cancelar
+                  Cancel
                 </button>
                 <button onClick={handleCreate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50">
-                  {saving ? 'Criando...' : 'Criar'}
+                  {saving ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </div>
@@ -233,12 +233,12 @@ export default function UsersPage() {
           {/* Edit Modal */}
           {modal === 'edit' && selected && (
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 z-10">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Editar Usuario</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Edit User</h2>
               <p className="text-sm text-gray-500 mb-4">{selected.email}</p>
               {error && <p className="mb-3 text-sm text-red-600 bg-red-50 rounded-lg p-3">{error}</p>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={editForm.name}
@@ -272,10 +272,10 @@ export default function UsersPage() {
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button onClick={closeModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                  Cancelar
+                  Cancel
                 </button>
                 <button onClick={handleEdit} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50">
-                  {saving ? 'Salvando...' : 'Salvar'}
+                  {saving ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -289,17 +289,17 @@ export default function UsersPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 text-center mb-1">Remover Usuario</h2>
+              <h2 className="text-lg font-semibold text-gray-900 text-center mb-1">Remove User</h2>
               <p className="text-sm text-gray-500 text-center mb-4">
-                Tem certeza que deseja remover <strong>{selected.name}</strong> ({selected.email})?
+                Are you sure you want to remove <strong>{selected.name}</strong> ({selected.email})?
               </p>
               {error && <p className="mb-3 text-sm text-red-600 bg-red-50 rounded-lg p-3">{error}</p>}
               <div className="flex justify-center space-x-3">
                 <button onClick={closeModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
-                  Cancelar
+                  Cancel
                 </button>
                 <button onClick={handleDelete} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
-                  {saving ? 'Removendo...' : 'Remover'}
+                  {saving ? 'Removing...' : 'Remove'}
                 </button>
               </div>
             </div>

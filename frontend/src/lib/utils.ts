@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string) {
-  return new Date(date).toLocaleString('pt-BR')
+  return new Date(date).toLocaleString('en-US')
 }
 
 export function formatRelative(date: string) {
@@ -17,7 +17,7 @@ export function formatRelative(date: string) {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return 'agora'
+  if (minutes < 1) return 'now'
   if (minutes < 60) return `${minutes}min`
   if (hours < 24) return `${hours}h`
   return `${days}d`

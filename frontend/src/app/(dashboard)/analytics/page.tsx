@@ -83,20 +83,20 @@ export default function AnalyticsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-        <p className="mt-1 text-sm text-gray-500">Comparacao de Execucoes K6</p>
+        <p className="mt-1 text-sm text-gray-500">K6 Execution Comparison</p>
       </div>
 
       {/* Selectors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Execucao A (base)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Execution A (baseline)</label>
           <select
             value={execA}
             onChange={(e) => setExecA(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
             disabled={loadingList}
           >
-            <option value="">Selecione uma execucao...</option>
+            <option value="">Select an execution...</option>
             {executions.map((item) => (
               <option key={item.id} value={item.id} disabled={item.id === execB}>
                 {formatExecLabel(item)}
@@ -105,14 +105,14 @@ export default function AnalyticsPage() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Execucao B (comparar)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Execution B (compare)</label>
           <select
             value={execB}
             onChange={(e) => setExecB(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
             disabled={loadingList}
           >
-            <option value="">Selecione uma execucao...</option>
+            <option value="">Select an execution...</option>
             {executions.map((item) => (
               <option key={item.id} value={item.id} disabled={item.id === execA}>
                 {formatExecLabel(item)}
@@ -124,7 +124,7 @@ export default function AnalyticsPage() {
 
       {/* Loading state */}
       {(loadingA || loadingB) && (
-        <div className="text-sm text-gray-400 mb-4">Carregando metricas...</div>
+        <div className="text-sm text-gray-400 mb-4">Loading metrics...</div>
       )}
 
       {/* Comparison Table */}
@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metrica</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metric</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Exec A</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Exec B</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Delta</th>
@@ -181,13 +181,13 @@ export default function AnalyticsPage() {
       {/* Empty state */}
       {!loadingA && !loadingB && (!statsA || !statsB) && (execA || execB) && (
         <div className="text-center py-12 text-gray-400">
-          Selecione duas execucoes para comparar
+          Select two executions to compare
         </div>
       )}
 
       {!execA && !execB && !loadingList && (
         <div className="text-center py-12 text-gray-400">
-          Selecione duas execucoes acima para ver a comparacao
+          Select two executions above to see the comparison
         </div>
       )}
     </div>

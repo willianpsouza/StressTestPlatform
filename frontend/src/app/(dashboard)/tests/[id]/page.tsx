@@ -74,9 +74,9 @@ export default function TestDetailPage() {
       setTest(res.data)
       setOriginalContent(scriptContent)
       setEditorDirty(false)
-      setSaveMsg({ type: 'ok', text: 'Script salvo com sucesso' })
+      setSaveMsg({ type: 'ok', text: 'Script saved successfully' })
     } else {
-      setSaveMsg({ type: 'error', text: res.error?.message || 'Falha ao salvar' })
+      setSaveMsg({ type: 'error', text: res.error?.message || 'Failed to save' })
     }
     setSaving(false)
   }
@@ -102,24 +102,24 @@ export default function TestDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Tem certeza?')) return
+    if (!confirm('Are you sure?')) return
     const res = await api.delete(`/tests/${params.id}`)
     if (res.success) router.push('/tests')
   }
 
   const handleDeleteExecution = async (execId: string) => {
-    if (!confirm('Apagar esta execucao e suas metricas?')) return
+    if (!confirm('Delete this execution and its metrics?')) return
     const res = await api.delete(`/executions/${execId}`)
     if (res.success) loadExecutions()
   }
 
   const handleClearHistory = async () => {
-    if (!confirm('Apagar TODAS as execucoes finalizadas deste teste e suas metricas?')) return
+    if (!confirm('Delete ALL completed executions of this test and their metrics?')) return
     const res = await api.delete<{ deleted: number }>(`/tests/${params.id}/executions`)
     if (res.success) loadExecutions()
   }
 
-  if (!test) return <div className="text-gray-400">Carregando...</div>
+  if (!test) return <div className="text-gray-400">Loading...</div>
 
   const grafanaUrl = `/grafana/d/k6-metrics/k6-stress-test-dashboard?orgId=1&from=now-1h&to=now&timezone=browser&var-domain=${encodeURIComponent(test.domain_name || '')}&var-test=${encodeURIComponent(test.name)}&var-interval_value=5&refresh=10s`
 
@@ -128,28 +128,28 @@ export default function TestDetailPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{test.name}</h1>
-          <p className="text-sm text-gray-500">Dominio: {test.domain_name} | Script: {test.script_filename}</p>
+          <p className="text-sm text-gray-500">Domain: {test.domain_name} | Script: {test.script_filename}</p>
           {test.description && <p className="mt-1 text-gray-500">{test.description}</p>}
         </div>
         <div className="flex space-x-2">
           <a href={grafanaUrl} target="_blank" rel="noopener noreferrer"
             className="px-4 py-2 bg-orange-50 text-orange-600 text-sm font-medium rounded-lg hover:bg-orange-100">
-            Ver no Grafana
+            View in Grafana
           </a>
           <Link href={`/tests/${test.id}/edit`}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Editar
+            Edit
           </Link>
           <button onClick={handleDelete}
             className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100">
-            Excluir
+            Delete
           </button>
         </div>
       </div>
 
       {/* Run Test */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Executar Teste</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Run Test</h2>
         <div className="flex items-end space-x-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">VUs</label>
@@ -157,17 +157,17 @@ export default function TestDetailPage() {
               className="w-24 px-3 py-2 border border-gray-300 rounded-lg" min="1" max="20" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Duracao</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
             <input type="text" value={duration} onChange={(e) => setDuration(e.target.value)}
               className="w-32 px-3 py-2 border border-gray-300 rounded-lg" placeholder="30s" />
           </div>
           <button onClick={handleRun} disabled={running}
             className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50">
-            {running ? 'Iniciando...' : 'Executar'}
+            {running ? 'Starting...' : 'Run'}
           </button>
           <Link href={`/schedules/new?test_id=${test.id}`}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Agendar
+            Schedule
           </Link>
         </div>
       </div>
@@ -183,10 +183,10 @@ export default function TestDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
-            <h2 className="text-lg font-semibold text-gray-900">Editor de Script</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Script Editor</h2>
             {editorDirty && (
               <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                Nao salvo
+                Unsaved
               </span>
             )}
           </div>
@@ -218,7 +218,7 @@ export default function TestDetailPage() {
                   onClick={loadScript}
                   className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Recarregar
+                  Reload
                 </button>
                 <button
                   onClick={handleSaveScript}
@@ -231,14 +231,14 @@ export default function TestDetailPage() {
                     saving && 'opacity-50'
                   )}
                 >
-                  {saving ? 'Salvando...' : 'Salvar Script'}
+                  {saving ? 'Saving...' : 'Save Script'}
                 </button>
               </div>
             </div>
 
             {/* Monaco Editor */}
             {scriptContent === null ? (
-              <div className="p-8 text-center text-gray-400">Carregando script...</div>
+              <div className="p-8 text-center text-gray-400">Loading script...</div>
             ) : (
               <MonacoEditor
                 height="500px"
@@ -270,19 +270,19 @@ export default function TestDetailPage() {
       {/* Execution History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Historico de Execucoes</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Execution History</h2>
           <div className="flex items-center space-x-3">
             {executions.length > 0 && (
               <button onClick={handleClearHistory}
                 className="text-sm text-red-600 hover:text-red-700 font-medium">
-                Limpar Historico
+                Clear History
               </button>
             )}
-            <button onClick={loadExecutions} className="text-sm text-primary-600 hover:text-primary-700">Atualizar</button>
+            <button onClick={loadExecutions} className="text-sm text-primary-600 hover:text-primary-700">Refresh</button>
           </div>
         </div>
         {executions.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Nenhuma execucao</div>
+          <div className="p-8 text-center text-gray-400">No executions</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -290,9 +290,9 @@ export default function TestDetailPage() {
                 <tr className="bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VUs</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracao</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acoes</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -309,12 +309,12 @@ export default function TestDetailPage() {
                     <td className="px-6 py-4 text-sm">
                       <div className="flex items-center space-x-3">
                         <Link href={`/executions/${exec.id}`} className="text-primary-600 hover:text-primary-700">
-                          Detalhes
+                          Details
                         </Link>
                         {exec.status !== 'RUNNING' && exec.status !== 'PENDING' && (
                           <button onClick={() => handleDeleteExecution(exec.id)}
                             className="text-red-500 hover:text-red-700">
-                            Apagar
+                            Delete
                           </button>
                         )}
                       </div>

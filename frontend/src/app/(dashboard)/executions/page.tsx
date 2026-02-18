@@ -37,14 +37,14 @@ export default function ExecutionsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Execucoes</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Executions</h1>
         <div className="flex items-center space-x-3">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
-            <option value="">Todos os Status</option>
+            <option value="">All Statuses</option>
             <option value="PENDING">PENDING</option>
             <option value="RUNNING">RUNNING</option>
             <option value="COMPLETED">COMPLETED</option>
@@ -53,28 +53,28 @@ export default function ExecutionsPage() {
             <option value="TIMEOUT">TIMEOUT</option>
           </select>
           <button onClick={loadExecutions} className="text-sm text-primary-600 hover:text-primary-700">
-            Atualizar
+            Refresh
           </button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Carregando...</div>
+          <div className="p-8 text-center text-gray-400">Loading...</div>
         ) : executions.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Nenhuma execucao encontrada</div>
+          <div className="p-8 text-center text-gray-400">No executions found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teste</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VUs</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracao</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inicio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fim</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acoes</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -96,7 +96,7 @@ export default function ExecutionsPage() {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <Link href={`/executions/${exec.id}`} className="text-primary-600 hover:text-primary-700">
-                        Detalhes
+                        Details
                       </Link>
                     </td>
                   </tr>

@@ -20,7 +20,7 @@ export default function Header() {
       <div className="flex items-center justify-between h-16 px-6">
         <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-500">
-            Projeto: <span className="font-semibold text-primary-600">{process.env.NEXT_PUBLIC_PROJECT_NAME || 'BR-IDNF'}</span>
+            Project: <span className="font-semibold text-primary-600">{process.env.NEXT_PUBLIC_PROJECT_NAME || 'BR-IDNF'}</span>
           </span>
         </div>
         <div className="flex items-center space-x-4">
@@ -30,7 +30,7 @@ export default function Header() {
             onClick={handleLogout}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            Sair
+            Logout
           </button>
         </div>
       </div>

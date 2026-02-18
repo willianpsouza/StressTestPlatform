@@ -22,7 +22,7 @@ export default function RegisterPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('As senhas nao coincidem')
+      setError('Passwords do not match')
       return
     }
 
@@ -48,7 +48,7 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-sm">
         <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">
-          Criar Conta
+          Create Account
         </h1>
         <p className="text-sm text-center text-gray-500 mb-8">
           {process.env.NEXT_PUBLIC_APP_NAME || 'StressTestPlatform'}
@@ -60,7 +60,7 @@ export default function RegisterPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
               type="text"
               value={name}
@@ -82,7 +82,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -94,7 +94,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}
@@ -110,14 +110,14 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >
-            {loading ? 'Criando...' : 'Criar Conta'}
+            {loading ? 'Creating...' : 'Create Account'}
           </button>
         </form>
 
         <p className="mt-4 text-sm text-center text-gray-500">
-          Ja tem conta?{' '}
+          Already have an account?{' '}
           <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-            Entrar
+            Sign In
           </Link>
         </p>
       </div>

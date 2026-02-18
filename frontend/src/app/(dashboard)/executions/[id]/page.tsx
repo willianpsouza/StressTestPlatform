@@ -34,14 +34,14 @@ export default function ExecutionDetailPage() {
   }, [exec?.status, loadExecution])
 
   const handleCancel = async () => {
-    if (!confirm('Cancelar esta execucao?')) return
+    if (!confirm('Cancel this execution?')) return
     setCancelling(true)
     const res = await api.post(`/executions/${params.id}/cancel`)
     if (res.success) loadExecution()
     setCancelling(false)
   }
 
-  if (!exec) return <div className="text-gray-400">Carregando...</div>
+  if (!exec) return <div className="text-gray-400">Loading...</div>
 
   const isActive = exec.status === 'RUNNING' || exec.status === 'PENDING'
   const metrics = exec.metrics_summary as Record<string, unknown> | undefined
@@ -50,25 +50,25 @@ export default function ExecutionDetailPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Execucao</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Execution</h1>
           <p className="text-sm text-gray-500">
-            Teste: {exec.test_name || exec.test_id} | Criado em: {formatDate(exec.created_at)}
+            Test: {exec.test_name || exec.test_id} | Created at: {formatDate(exec.created_at)}
           </p>
         </div>
         <div className="flex space-x-2">
           {isActive && (
             <button onClick={handleCancel} disabled={cancelling}
               className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 disabled:opacity-50">
-              {cancelling ? 'Cancelando...' : 'Cancelar'}
+              {cancelling ? 'Cancelling...' : 'Cancel'}
             </button>
           )}
           <Link href={`/tests/${exec.test_id}`}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Ver Teste
+            View Test
           </Link>
           <button onClick={() => router.back()}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Voltar
+            Back
           </button>
         </div>
       </div>
@@ -82,19 +82,19 @@ export default function ExecutionDetailPage() {
           </span>
         </InfoCard>
         <InfoCard label="VUs" value={String(exec.vus)} />
-        <InfoCard label="Duracao" value={exec.duration} />
+        <InfoCard label="Duration" value={exec.duration} />
         <InfoCard label="Exit Code" value={exec.exit_code !== undefined ? String(exec.exit_code) : '-'} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <InfoCard label="Inicio" value={exec.started_at ? formatDate(exec.started_at) : 'Aguardando...'} />
-        <InfoCard label="Fim" value={exec.completed_at ? formatDate(exec.completed_at) : '-'} />
+        <InfoCard label="Start" value={exec.started_at ? formatDate(exec.started_at) : 'Waiting...'} />
+        <InfoCard label="End" value={exec.completed_at ? formatDate(exec.completed_at) : '-'} />
       </div>
 
       {/* Error Message */}
       {exec.error_message && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-          <h3 className="text-sm font-semibold text-red-800 mb-1">Erro</h3>
+          <h3 className="text-sm font-semibold text-red-800 mb-1">Error</h3>
           <p className="text-sm text-red-700">{exec.error_message}</p>
         </div>
       )}
@@ -102,7 +102,7 @@ export default function ExecutionDetailPage() {
       {/* Metrics Summary */}
       {metrics && Object.keys(metrics).length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Metricas</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Metrics</h2>
           <MetricsSummary metrics={metrics} />
         </div>
       )}
@@ -119,7 +119,7 @@ export default function ExecutionDetailPage() {
         </button>
         {showStdout && (
           <div className="px-6 pb-4">
-            <LogViewer content={exec.stdout || 'Sem output'} />
+            <LogViewer content={exec.stdout || 'No output'} />
           </div>
         )}
       </div>
@@ -136,7 +136,7 @@ export default function ExecutionDetailPage() {
         </button>
         {showStderr && (
           <div className="px-6 pb-4">
-            <LogViewer content={exec.stderr || 'Sem output'} />
+            <LogViewer content={exec.stderr || 'No output'} />
           </div>
         )}
       </div>

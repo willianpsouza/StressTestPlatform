@@ -54,7 +54,7 @@ export default function DashboardPage() {
   }, [])
 
   if (loading) {
-    return <div className="text-gray-400">Carregando...</div>
+    return <div className="text-gray-400">Loading...</div>
   }
 
   return (
@@ -113,7 +113,7 @@ export default function DashboardPage() {
                     svc.status === 'warning' && 'text-yellow-700',
                     svc.status === 'error' && 'text-red-700',
                   )}>
-                    {svc.status === 'ok' ? 'Conectado' : svc.status === 'warning' ? 'Atencao' : 'Offline'}
+                    {svc.status === 'ok' ? 'Connected' : svc.status === 'warning' ? 'Warning' : 'Offline'}
                   </span>
                 </div>
               </div>
@@ -125,17 +125,17 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Total Testes" value={stats.total_tests} />
-          <StatCard label="Executando Agora" value={stats.running_now} color="text-blue-600" />
-          <StatCard label="Completos Hoje" value={stats.completed_today} color="text-green-600" />
-          <StatCard label="Falhos Hoje" value={stats.failed_today} color="text-red-600" />
+          <StatCard label="Total Tests" value={stats.total_tests} />
+          <StatCard label="Running Now" value={stats.running_now} color="text-blue-600" />
+          <StatCard label="Completed Today" value={stats.completed_today} color="text-green-600" />
+          <StatCard label="Failed Today" value={stats.failed_today} color="text-red-600" />
         </div>
       )}
 
       {/* K6 Metrics */}
       {k6Stats && (
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Metricas K6</h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">K6 Metrics</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Requests" value={k6Stats.total_requests.toLocaleString()} />
             <StatCard label="Error Rate" value={`${k6Stats.error_rate}%`} color={k6Stats.error_rate > 5 ? 'text-red-600' : k6Stats.error_rate > 1 ? 'text-yellow-600' : 'text-green-600'} />
@@ -148,35 +148,35 @@ export default function DashboardPage() {
       {/* Executions Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Execucoes Recentes</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Recent Executions</h2>
           <button
             onClick={fetchData}
             className="text-sm text-primary-600 hover:text-primary-700"
           >
-            Atualizar
+            Refresh
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teste</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dominio</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Domain</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VUs</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracao</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Requests</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Response</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Error Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {executions.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-6 py-8 text-center text-gray-400">
-                    Nenhuma execucao encontrada
+                    No executions found
                   </td>
                 </tr>
               ) : (

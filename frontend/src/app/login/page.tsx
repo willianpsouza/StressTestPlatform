@@ -38,7 +38,7 @@ export default function LoginPage() {
           {process.env.NEXT_PUBLIC_APP_NAME || 'StressTestPlatform'}
         </h1>
         <p className="text-sm text-center text-gray-500 mb-8">
-          Projeto: {process.env.NEXT_PUBLIC_PROJECT_NAME || 'BR-IDNF'}
+          Project: {process.env.NEXT_PUBLIC_PROJECT_NAME || 'BR-IDNF'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -73,14 +73,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <p className="mt-4 text-sm text-center text-gray-500">
-          Sem conta?{' '}
+          No account?{' '}
           <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-            Registrar
+            Register
           </Link>
         </p>
       </div>

@@ -31,12 +31,12 @@ export default function DomainDetailPage() {
   }, [params.id])
 
   const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja excluir este dominio?')) return
+    if (!confirm('Are you sure you want to delete this domain?')) return
     const res = await api.delete(`/domains/${params.id}`)
     if (res.success) router.push('/domains')
   }
 
-  if (!domain) return <div className="text-gray-400">Carregando...</div>
+  if (!domain) return <div className="text-gray-400">Loading...</div>
 
   return (
     <div>
@@ -44,16 +44,16 @@ export default function DomainDetailPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{domain.name}</h1>
           {domain.description && <p className="mt-1 text-gray-500">{domain.description}</p>}
-          <p className="mt-1 text-sm text-gray-400">Criado em {formatDate(domain.created_at)}</p>
+          <p className="mt-1 text-sm text-gray-400">Created at {formatDate(domain.created_at)}</p>
         </div>
         <div className="flex space-x-2">
           <Link href={`/domains/${domain.id}/edit`}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Editar
+            Edit
           </Link>
           <button onClick={handleDelete}
             className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100">
-            Excluir
+            Delete
           </button>
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function DomainDetailPage() {
       {/* K6 Metrics */}
       {k6Stats && k6Stats.total_data_points > 0 && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Metricas K6</h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">K6 Metrics</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <p className="text-xs text-gray-500">Total Requests</p>
@@ -91,23 +91,23 @@ export default function DomainDetailPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Testes ({tests.length})</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Tests ({tests.length})</h2>
           <Link href={`/tests/new?domain_id=${domain.id}`}
             className="px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700">
-            Novo Teste
+            New Test
           </Link>
         </div>
         {tests.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Nenhum teste neste dominio</div>
+          <div className="p-8 text-center text-gray-400">No tests in this domain</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Script</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VUs</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracao</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">

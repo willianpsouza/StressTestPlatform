@@ -33,40 +33,40 @@ export default function ScheduleDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Excluir este agendamento?')) return
+    if (!confirm('Delete this schedule?')) return
     const res = await api.delete(`/schedules/${params.id}`)
     if (res.success) router.push('/schedules')
   }
 
-  if (!schedule) return <div className="text-gray-400">Carregando...</div>
+  if (!schedule) return <div className="text-gray-400">Loading...</div>
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agendamento</h1>
-          <p className="text-sm text-gray-500">Teste: {schedule.test_name || schedule.test_id}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
+          <p className="text-sm text-gray-500">Test: {schedule.test_name || schedule.test_id}</p>
         </div>
         <div className="flex space-x-2">
           {schedule.status === 'ACTIVE' && (
             <button onClick={handlePause}
               className="px-4 py-2 bg-yellow-50 text-yellow-700 text-sm font-medium rounded-lg hover:bg-yellow-100">
-              Pausar
+              Pause
             </button>
           )}
           {schedule.status === 'PAUSED' && (
             <button onClick={handleResume}
               className="px-4 py-2 bg-green-50 text-green-700 text-sm font-medium rounded-lg hover:bg-green-100">
-              Retomar
+              Resume
             </button>
           )}
           <button onClick={handleDelete}
             className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100">
-            Excluir
+            Delete
           </button>
           <Link href={`/tests/${schedule.test_id}`}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Ver Teste
+            View Test
           </Link>
         </div>
       </div>
@@ -81,15 +81,15 @@ export default function ScheduleDetailPage() {
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Tipo</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Type</p>
             <p className="text-sm font-semibold text-gray-900">
-              {schedule.schedule_type === 'ONCE' ? 'Unico' : 'Recorrente'}
+              {schedule.schedule_type === 'ONCE' ? 'Once' : 'Recurring'}
             </p>
           </div>
 
           {schedule.cron_expression && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase mb-1">Expressao Cron</p>
+              <p className="text-xs font-medium text-gray-500 uppercase mb-1">Cron Expression</p>
               <p className="text-sm font-mono text-gray-900">{schedule.cron_expression}</p>
             </div>
           )}
@@ -100,27 +100,27 @@ export default function ScheduleDetailPage() {
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Duracao</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Duration</p>
             <p className="text-sm font-semibold text-gray-900">{schedule.duration}</p>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Proxima Execucao</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Next Execution</p>
             <p className="text-sm text-gray-900">{schedule.next_run_at ? formatDate(schedule.next_run_at) : '-'}</p>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Ultima Execucao</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Execution</p>
             <p className="text-sm text-gray-900">{schedule.last_run_at ? formatDate(schedule.last_run_at) : '-'}</p>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Total de Execucoes</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Total Executions</p>
             <p className="text-sm font-semibold text-gray-900">{schedule.run_count}</p>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Criado em</p>
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">Created at</p>
             <p className="text-sm text-gray-900">{formatDate(schedule.created_at)}</p>
           </div>
         </div>

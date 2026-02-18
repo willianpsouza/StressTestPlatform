@@ -50,40 +50,40 @@ export default function NewTestPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Novo Teste</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">New Test</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         {error && <div className="p-3 text-sm text-red-700 bg-red-50 rounded-lg">{error}</div>}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dominio</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Domain</label>
           <select value={domainId} onChange={(e) => setDomainId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required>
-            <option value="">Selecione...</option>
+            <option value="">Select...</option>
             {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" rows={2} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">VUs Padrao</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default VUs</label>
             <input type="number" value={defaultVus} onChange={(e) => setDefaultVus(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" min="1" max="20" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Duracao Padrao</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Duration</label>
             <input type="text" value={defaultDuration} onChange={(e) => setDefaultDuration(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="30s" />
           </div>
@@ -98,11 +98,11 @@ export default function NewTestPage() {
         <div className="flex space-x-3">
           <button type="submit" disabled={loading}
             className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50">
-            {loading ? 'Criando...' : 'Criar Teste'}
+            {loading ? 'Creating...' : 'Create Test'}
           </button>
           <button type="button" onClick={() => router.back()}
             className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-            Cancelar
+            Cancel
           </button>
         </div>
       </form>
