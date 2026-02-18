@@ -47,6 +47,7 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: "yesoreyeram-infinity-datasource"
       # PostgreSQL credentials for provisioned datasource
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
@@ -68,6 +69,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # Metrics API (Go — K6 query microservice)
+  metrics-api:
+    build:
+      context: ./metrics-api
+      dockerfile: Dockerfile
+    container_name: stresstest-metrics-api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://stresstest:stresstest_secret@postgres:5432/stresstest?sslmode=disable}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      PORT: "8081"
+    networks:
+      - stresstest-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   # Backend (Go API)
@@ -148,6 +168,7 @@ services:
       - backend
       - frontend
       - grafana
+      - metrics-api
     restart: unless-stopped
 
   # Database migrations runner

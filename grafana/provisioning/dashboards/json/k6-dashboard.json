@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "K6 Stress Test Dashboard — PostgreSQL backed",
+  "description": "K6 Stress Test Dashboard — Metrics API backed",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -23,14 +23,18 @@
       "title": "Request Made",
       "type": "stat",
       "gridPos": { "h": 10, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "requests", "text": "Requests", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -62,14 +66,18 @@
       "title": "HTTP Failures",
       "type": "stat",
       "gridPos": { "h": 10, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(m.metric_value), 0) AS \"Failures\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "failures", "text": "Failures", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -101,14 +109,18 @@
       "title": "Peak RPS",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT MAX(rps) AS \"Peak RPS\" FROM (SELECT SUM(m.metric_value) / ${interval_value} AS rps FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY floor(extract(epoch FROM m.timestamp) / ${interval_value})) sub",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "peak_rps", "text": "Peak RPS", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -139,14 +151,18 @@
       "title": "Error Rate",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 15, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(CASE WHEN m.status NOT IN ('200', '201') THEN m.metric_value ELSE 0 END) * 100.0 / NULLIF(SUM(m.metric_value), 0), 0) AS \"Error Rate\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "error_rate", "text": "Error Rate", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -180,14 +196,18 @@
       "title": "Average Response Time",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT AVG(m.metric_value) AS \"Avg Response\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "avg_response", "text": "Avg Response", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -221,14 +241,18 @@
       "title": "P90 Response",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 21, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value) AS \"P90\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "p90", "text": "P90", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -262,14 +286,18 @@
       "title": "Request / VUS",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 12, "y": 5 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COALESCE((SELECT SUM(mm.metric_value) FROM k6_metrics mm JOIN tests tt ON tt.id = mm.test_id JOIN domains dd ON dd.id = tt.domain_id WHERE dd.name = '${domain}' AND tt.name = '${test}' AND mm.metric_name = 'http_reqs' AND $__timeFilter(mm.timestamp)) / NULLIF((SELECT MAX(mm.metric_value) FROM k6_metrics mm JOIN tests tt ON tt.id = mm.test_id JOIN domains dd ON dd.id = tt.domain_id WHERE dd.name = '${domain}' AND tt.name = '${test}' AND mm.metric_name = 'vus_max' AND $__timeFilter(mm.timestamp)), 0), 0) AS \"Req/VUS\"",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "req_per_vu", "text": "Req/VUS", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -301,14 +329,18 @@
       "title": "VUS Max",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 15, "y": 5 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT MAX(m.metric_value) AS \"VUS Max\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus_max' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "vus_max", "text": "VUS Max", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -339,14 +371,18 @@
       "title": "Max Response Time",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 18, "y": 5 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT MAX(m.metric_value) AS \"Max Response\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "max_response", "text": "Max Response", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -380,14 +416,18 @@
       "title": "P95 Response",
       "type": "stat",
       "gridPos": { "h": 5, "w": 3, "x": 21, "y": 5 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value) AS \"P95\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp)",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/stats?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "p95", "text": "P95", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -421,47 +461,25 @@
       "title": "ALL METRICS",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/all?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "requests", "text": "Requests", "type": "number" },
+            { "selector": "rps", "text": "RPS", "type": "number" },
+            { "selector": "iterations", "text": "Iterations", "type": "number" },
+            { "selector": "response_time", "text": "Response Time", "type": "number" },
+            { "selector": "failures", "text": "Failures", "type": "number" }
+          ],
           "refId": "A"
-        },
-        {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) / ${interval_value} AS \"RPS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
-          "refId": "B"
-        },
-        {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Iterations\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'iterations' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
-          "refId": "C"
-        },
-        {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Response Time\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
-          "refId": "D"
-        },
-        {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, COALESCE(SUM(m.metric_value), 0) AS \"Failures\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
-          "refId": "E"
         }
       ],
       "fieldConfig": {
@@ -507,14 +525,20 @@
       "title": "Histogram - Errors",
       "type": "timeseries",
       "gridPos": { "h": 5, "w": 24, "x": 0, "y": 20 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, COALESCE(SUM(m.metric_value), 0) AS \"Errors\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/errors?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "errors", "text": "Errors", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -543,14 +567,20 @@
       "title": "Histogram - Response Time",
       "type": "timeseries",
       "gridPos": { "h": 6, "w": 24, "x": 0, "y": 25 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Avg Response Time\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/response-histogram?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "avg_response", "text": "Avg Response Time", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -579,14 +609,20 @@
       "title": "Requests",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 31 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Requests\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/requests?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "requests", "text": "Requests", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -617,14 +653,20 @@
       "title": "Virtual Users",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 41 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"VUS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/vus?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "vus", "text": "VUS", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -655,14 +697,22 @@
       "title": "Response Time",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 51 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, AVG(m.metric_value) AS \"Median\", PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value) AS \"P90\", PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value) AS \"P95\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/percentiles?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "median", "text": "Median", "type": "number" },
+            { "selector": "p90", "text": "P90", "type": "number" },
+            { "selector": "p95", "text": "P95", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -707,14 +757,20 @@
       "title": "Request Per Second",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 61 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) / ${interval_value} AS \"RPS\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/rps?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "rps", "text": "RPS", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -745,14 +801,20 @@
       "title": "Iterations",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 71 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS \"Iterations\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'iterations' AND $__timeFilter(m.timestamp) GROUP BY 1 ORDER BY 1",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/iterations?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "iterations", "text": "Iterations", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -783,14 +845,20 @@
       "title": "Requests per VU",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 81 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT r.time, COALESCE(r.reqs / NULLIF(v.vus, 0), 0) AS \"Req/VU\" FROM (SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, SUM(m.metric_value) AS reqs FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND $__timeFilter(m.timestamp) GROUP BY 1) r LEFT JOIN (SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / ${interval_value}) * ${interval_value}) AS time, MAX(m.metric_value) AS vus FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'vus' AND $__timeFilter(m.timestamp) GROUP BY 1) v ON r.time = v.time ORDER BY r.time",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/ts/req-per-vu?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}&interval=${interval_value}",
+          "parser": "backend",
+          "format": "timeseries",
+          "root_selector": "",
+          "columns": [
+            { "selector": "time", "text": "Time", "type": "timestamp" },
+            { "selector": "req_per_vu", "text": "Req/VU", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -820,14 +888,27 @@
       "title": "HTTP REQUEST",
       "type": "table",
       "gridPos": { "h": 11, "w": 24, "x": 0, "y": 91 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COALESCE(m.url, 'N/A') AS \"URL\", COALESCE(m.method, 'N/A') AS \"Method\", COALESCE(m.status, 'N/A') AS \"Status\", COUNT(*) AS \"Count\", ROUND(AVG(m.metric_value)::numeric, 2) AS \"Avg (ms)\", ROUND(MIN(m.metric_value)::numeric, 2) AS \"Min (ms)\", ROUND(MAX(m.metric_value)::numeric, 2) AS \"Max (ms)\", ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P90 (ms)\", ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P95 (ms)\", ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS \"P99 (ms)\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_req_duration' AND $__timeFilter(m.timestamp) GROUP BY m.url, m.method, m.status ORDER BY \"Count\" DESC",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/tables/http-requests?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "url", "text": "URL", "type": "string" },
+            { "selector": "method", "text": "Method", "type": "string" },
+            { "selector": "status", "text": "Status", "type": "string" },
+            { "selector": "count", "text": "Count", "type": "number" },
+            { "selector": "avg_ms", "text": "Avg (ms)", "type": "number" },
+            { "selector": "min_ms", "text": "Min (ms)", "type": "number" },
+            { "selector": "max_ms", "text": "Max (ms)", "type": "number" },
+            { "selector": "p90_ms", "text": "P90 (ms)", "type": "number" },
+            { "selector": "p95_ms", "text": "P95 (ms)", "type": "number" },
+            { "selector": "p99_ms", "text": "P99 (ms)", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -872,14 +953,21 @@
       "title": "Error Detail",
       "type": "table",
       "gridPos": { "h": 6, "w": 24, "x": 0, "y": 102 },
-      "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT COALESCE(m.url, 'N/A') AS \"URL\", COALESCE(m.method, 'N/A') AS \"Method\", m.status AS \"Status\", SUM(m.metric_value)::int AS \"Count\" FROM k6_metrics m JOIN tests t ON t.id = m.test_id JOIN domains d ON d.id = t.domain_id WHERE d.name = '${domain}' AND t.name = '${test}' AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200', '201') AND $__timeFilter(m.timestamp) GROUP BY m.url, m.method, m.status ORDER BY \"Count\" DESC",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+          "type": "json",
+          "source": "url",
+          "url": "http://metrics-api:8081/grafana/tables/errors?domain=${domain}&test=${test}&from=${__from:date:iso}&to=${__to:date:iso}",
+          "parser": "backend",
+          "root_selector": "",
+          "columns": [
+            { "selector": "url", "text": "URL", "type": "string" },
+            { "selector": "method", "text": "Method", "type": "string" },
+            { "selector": "status", "text": "Status", "type": "string" },
+            { "selector": "count", "text": "Count", "type": "number" }
+          ],
           "refId": "A"
         }
       ],
@@ -923,26 +1011,44 @@
     "list": [
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
-        "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-        "definition": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id JOIN k6_metrics m ON m.test_id = t.id ORDER BY d.name",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+        "definition": "",
         "includeAll": true,
         "label": "Domain",
         "multi": false,
         "name": "domain",
-        "query": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id JOIN k6_metrics m ON m.test_id = t.id ORDER BY d.name",
+        "query": {
+          "type": "json",
+          "source": "url",
+          "data": "",
+          "url": "http://metrics-api:8081/grafana/variables/domains",
+          "root_selector": "",
+          "columns": [
+            { "selector": "", "text": "", "type": "string" }
+          ]
+        },
         "refresh": 2,
         "sort": 1,
         "type": "query"
       },
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
-        "datasource": { "type": "postgres", "uid": "stresstest-postgres" },
-        "definition": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id JOIN k6_metrics m ON m.test_id = t.id WHERE d.name = '${domain}' ORDER BY t.name",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "stresstest-metrics-api" },
+        "definition": "",
         "includeAll": true,
         "label": "Test",
         "multi": false,
         "name": "test",
-        "query": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id JOIN k6_metrics m ON m.test_id = t.id WHERE d.name = '${domain}' ORDER BY t.name",
+        "query": {
+          "type": "json",
+          "source": "url",
+          "data": "",
+          "url": "http://metrics-api:8081/grafana/variables/tests?domain=${domain}",
+          "root_selector": "",
+          "columns": [
+            { "selector": "", "text": "", "type": "string" }
+          ]
+        },
         "refresh": 2,
         "sort": 1,
         "type": "query"

@@ -13,5 +13,15 @@ datasources:
       timescaledb: false
     secureJsonData:
       password: ${POSTGRES_PASSWORD}
-    isDefault: true
+    isDefault: false
     editable: true
+
+  - name: Metrics API
+    type: yesoreyeram-infinity-datasource
+    uid: stresstest-metrics-api
+    access: proxy
+    url: http://metrics-api:8081
+    isDefault: false
+    editable: false
+    jsonData:
+      global_queries: []

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { cn, formatDate, statusColors } from '@/lib/utils'
-import { DashboardStats, TestExecution, ServiceStatus } from '@/types'
+import { DashboardStats, TestExecution, ServiceStatus, K6Overview } from '@/types'
 
 const serviceLabels: Record<string, string> = {
   postgres: 'PostgreSQL',
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [executions, setExecutions] = useState<TestExecution[]>([])
   const [services, setServices] = useState<ServiceStatus[]>([])
+  const [k6Stats, setK6Stats] = useState<K6Overview | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchData = async () => {
@@ -36,6 +37,12 @@ export default function DashboardPage() {
     if (execsRes.success && execsRes.data) setExecutions(execsRes.data)
     if (servicesRes.success && servicesRes.data) setServices(servicesRes.data)
     setLoading(false)
+
+    // K6 metrics (non-blocking — separate fetch from metrics-api)
+    try {
+      const res = await fetch('/metrics-api/dashboard/overview')
+      if (res.ok) setK6Stats(await res.json())
+    } catch {}
   }
 
   useEffect(() => {
@@ -123,6 +130,19 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* K6 Metrics */}
+      {k6Stats && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Metricas K6</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Requests" value={k6Stats.total_requests.toLocaleString()} />
+            <StatCard label="Error Rate" value={`${k6Stats.error_rate}%`} color={k6Stats.error_rate > 5 ? 'text-red-600' : k6Stats.error_rate > 1 ? 'text-yellow-600' : 'text-green-600'} />
+            <StatCard label="Avg Response" value={`${k6Stats.avg_response_ms} ms`} color={k6Stats.avg_response_ms > 500 ? 'text-red-600' : k6Stats.avg_response_ms > 200 ? 'text-yellow-600' : 'text-green-600'} />
+            <StatCard label="P95 Response" value={`${k6Stats.p95_response_ms} ms`} color={k6Stats.p95_response_ms > 500 ? 'text-red-600' : k6Stats.p95_response_ms > 200 ? 'text-yellow-600' : 'text-green-600'} />
+          </div>
+        </div>
+      )}
+
       {/* Executions Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -179,7 +199,7 @@ export default function DashboardPage() {
   )
 }
 
-function StatCard({ label, value, color = 'text-gray-900' }: { label: string; value: number; color?: string }) {
+function StatCard({ label, value, color = 'text-gray-900' }: { label: string; value: number | string; color?: string }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <p className="text-sm text-gray-500">{label}</p>

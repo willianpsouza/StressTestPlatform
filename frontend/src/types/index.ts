@@ -114,3 +114,13 @@ export interface ServiceStatus {
   status: 'ok' | 'warning' | 'error'
   message?: string
 }
+
+export interface K6Overview {
+  total_requests: number
+  total_failures: number
+  error_rate: number
+  success_rate: number
+  avg_response_ms: number
+  p95_response_ms: number
+  total_data_points: number
+}

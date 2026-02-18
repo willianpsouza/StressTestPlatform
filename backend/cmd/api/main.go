@@ -92,7 +92,6 @@ func main() {
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
 	servicesHandler := handlers.NewServicesHandler(dbPool, redisClient, grafanaClient, settingsRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
-	metricsHandler := handlers.NewMetricsHandler(metricRepo, domainRepo, testRepo, redisClient)
 
 	// Router
 	r := chi.NewRouter()
@@ -126,15 +125,6 @@ func main() {
 			r.Post("/auth/register", authHandler.Register)
 			r.Post("/auth/login", authHandler.Login)
 			r.Post("/auth/refresh", authHandler.Refresh)
-		})
-
-		// Grafana API endpoints (no auth — internal network only)
-		r.Group(func(r chi.Router) {
-			r.Get("/grafana/domains", metricsHandler.ListDomains)
-			r.Get("/grafana/tests", metricsHandler.ListTests)
-			r.Get("/grafana/metrics", metricsHandler.ListMetricNames)
-			r.Get("/grafana/timeseries", metricsHandler.GetTimeseries)
-			r.Get("/grafana/summary", metricsHandler.GetSummary)
 		})
 
 		// Protected routes

@@ -4,18 +4,26 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { formatDate } from '@/lib/utils'
-import { Domain, Test } from '@/types'
+import { cn, formatDate } from '@/lib/utils'
+import { Domain, Test, K6Overview } from '@/types'
 
 export default function DomainDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [domain, setDomain] = useState<Domain | null>(null)
   const [tests, setTests] = useState<Test[]>([])
+  const [k6Stats, setK6Stats] = useState<K6Overview | null>(null)
 
   useEffect(() => {
     api.get<Domain>(`/domains/${params.id}`).then((res) => {
-      if (res.success && res.data) setDomain(res.data)
+      if (res.success && res.data) {
+        setDomain(res.data)
+        // Fetch K6 metrics for this domain
+        fetch(`/metrics-api/dashboard/domain?name=${encodeURIComponent(res.data.name)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data) setK6Stats(data) })
+          .catch(() => {})
+      }
     })
     api.get<Test[]>(`/tests?domain_id=${params.id}`).then((res) => {
       if (res.success && res.data) setTests(res.data)
@@ -49,6 +57,37 @@ export default function DomainDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* K6 Metrics */}
+      {k6Stats && k6Stats.total_data_points > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Metricas K6</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">Total Requests</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{k6Stats.total_requests.toLocaleString()}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">Error Rate</p>
+              <p className={cn('text-2xl font-bold mt-1', k6Stats.error_rate > 5 ? 'text-red-600' : k6Stats.error_rate > 1 ? 'text-yellow-600' : 'text-green-600')}>
+                {k6Stats.error_rate}%
+              </p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">Avg Response</p>
+              <p className={cn('text-2xl font-bold mt-1', k6Stats.avg_response_ms > 500 ? 'text-red-600' : k6Stats.avg_response_ms > 200 ? 'text-yellow-600' : 'text-green-600')}>
+                {k6Stats.avg_response_ms} ms
+              </p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <p className="text-xs text-gray-500">P95 Response</p>
+              <p className={cn('text-2xl font-bold mt-1', k6Stats.p95_response_ms > 500 ? 'text-red-600' : k6Stats.p95_response_ms > 200 ? 'text-yellow-600' : 'text-green-600')}>
+                {k6Stats.p95_response_ms} ms
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
