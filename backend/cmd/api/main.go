@@ -59,27 +59,35 @@ func main() {
 	// External clients
 	influxClient := influxdb.NewClient(cfg.InfluxDB)
 	grafanaClient := grafana.NewClient(cfg.Grafana)
-	_ = grafanaClient // Used in Phase 4
+	_ = grafanaClient
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
 	sessionRepo := postgres.NewSessionRepository(dbPool)
 	domainRepo := postgres.NewDomainRepository(dbPool)
 	testRepo := postgres.NewTestRepository(dbPool)
+	execRepo := postgres.NewExecutionRepository(dbPool)
 
 	// Cache
 	_ = redisadapter.NewCache(redisClient)
+
+	// K6 Runner
+	k6Runner := app.NewK6Runner(execRepo, testRepo, influxClient.URL(), influxClient.Token(), influxClient.Org(), cfg.K6)
+	k6Runner.RecoverOrphans()
 
 	// Services
 	authService := app.NewAuthService(cfg.JWT, userRepo, sessionRepo)
 	domainService := app.NewDomainService(domainRepo)
 	testService := app.NewTestService(testRepo, domainRepo, influxClient, cfg.K6)
+	execService := app.NewExecutionService(execRepo, testRepo, k6Runner)
 
 	// Handlers
 	healthHandler := handlers.NewHealthHandler(dbPool, redisClient, cfg)
 	authHandler := handlers.NewAuthHandler(authService)
 	domainHandler := handlers.NewDomainHandler(domainService)
 	testHandler := handlers.NewTestHandler(testService)
+	execHandler := handlers.NewExecutionHandler(execService)
+	dashboardHandler := handlers.NewDashboardHandler(execService)
 
 	// Router
 	r := chi.NewRouter()
@@ -139,6 +147,17 @@ func main() {
 			r.Put("/tests/{id}", testHandler.Update)
 			r.Put("/tests/{id}/script", testHandler.UpdateScript)
 			r.Delete("/tests/{id}", testHandler.Delete)
+
+			// Executions
+			r.Get("/executions", execHandler.List)
+			r.Post("/executions", execHandler.Create)
+			r.Get("/executions/{id}", execHandler.Get)
+			r.Post("/executions/{id}/cancel", execHandler.Cancel)
+			r.Get("/executions/{id}/logs", execHandler.Logs)
+
+			// Dashboard (all users see all executions)
+			r.Get("/dashboard/executions", dashboardHandler.ListExecutions)
+			r.Get("/dashboard/stats", dashboardHandler.Stats)
 
 			// ROOT-only: user management
 			r.Group(func(r chi.Router) {
