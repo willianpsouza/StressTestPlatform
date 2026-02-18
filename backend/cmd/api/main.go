@@ -95,6 +95,7 @@ func main() {
 	execHandler := handlers.NewExecutionHandler(execService)
 	dashboardHandler := handlers.NewDashboardHandler(execService)
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
+	influxdbHandler := handlers.NewInfluxDBHandler(influxClient, testRepo)
 
 	// Router
 	r := chi.NewRouter()
@@ -174,6 +175,10 @@ func main() {
 			// Dashboard (all users see all executions)
 			r.Get("/dashboard/executions", dashboardHandler.ListExecutions)
 			r.Get("/dashboard/stats", dashboardHandler.Stats)
+
+			// InfluxDB bucket management
+			r.Get("/influxdb/buckets", influxdbHandler.ListBuckets)
+			r.Post("/influxdb/buckets/{name}/clear", influxdbHandler.ClearBucket)
 
 			// ROOT-only: user management
 			r.Group(func(r chi.Router) {
