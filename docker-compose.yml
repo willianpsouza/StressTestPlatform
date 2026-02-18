@@ -1,0 +1,210 @@
+services:
+  # PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: stresstest-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stresstest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stresstest_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-stresstest}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - stresstest-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stresstest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis 7
+  redis:
+    image: redis:7-alpine
+    container_name: stresstest-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - stresstest-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # InfluxDB 2.7
+  influxdb:
+    image: influxdb:2.7
+    container_name: stresstest-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-adminpassword123}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-stresstest}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-default}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-dev-influxdb-token-change-in-production}
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - stresstest-internal
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Grafana OSS (subpath /grafana/)
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: stresstest-grafana
+    environment:
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - stresstest-internal
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/grafana/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend (Go API)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stresstest-backend
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: ${APP_NAME:-StressTestPlatform}
+      PROJECT_NAME: ${PROJECT_NAME:-BR-IDNF}
+      DATABASE_URL: ${DATABASE_URL:-postgres://stresstest:stresstest_secret@postgres:5432/stresstest?sslmode=disable}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      INFLUXDB_URL: ${INFLUXDB_URL:-http://influxdb:8086}
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-dev-influxdb-token-change-in-production}
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-stresstest}
+      GRAFANA_URL: ${GRAFANA_URL:-http://grafana:3000}
+      GRAFANA_PUBLIC_URL: ${GRAFANA_PUBLIC_URL:-/grafana}
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - k6_scripts:/app/k6-scripts
+    networks:
+      - stresstest-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api/v1}
+        - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME:-StressTestPlatform}
+        - NEXT_PUBLIC_PROJECT_NAME=${NEXT_PUBLIC_PROJECT_NAME:-BR-IDNF}
+        - INTERNAL_API_URL=${INTERNAL_API_URL:-http://backend:8080}
+    container_name: stresstest-frontend
+    environment:
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:8080}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-StressTestPlatform}
+      NEXT_PUBLIC_PROJECT_NAME: ${NEXT_PUBLIC_PROJECT_NAME:-BR-IDNF}
+    networks:
+      - stresstest-internal
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: stresstest-nginx
+    ports:
+      - "80:80"
+    networks:
+      - stresstest-internal
+    depends_on:
+      - backend
+      - frontend
+      - grafana
+    restart: unless-stopped
+
+  # Database migrations runner
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stresstest-migrate
+    command: ["./migrate", "up"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://stresstest:stresstest_secret@postgres:5432/stresstest?sslmode=disable}
+    networks:
+      - stresstest-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  # Database seeder
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stresstest-seed
+    command: ["./seed"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://stresstest:stresstest_secret@postgres:5432/stresstest?sslmode=disable}
+      SEED_ROOT_EMAIL: ${SEED_ROOT_EMAIL:-admin@stresstest.local}
+      SEED_ROOT_PASSWORD: ${SEED_ROOT_PASSWORD:-admin123}
+      SEED_ROOT_NAME: ${SEED_ROOT_NAME:-Admin}
+      GRAFANA_URL: ${GRAFANA_URL:-http://grafana:3000}
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    networks:
+      - stresstest-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
+
+networks:
+  stresstest-internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+  grafana_data:
+  k6_scripts:
