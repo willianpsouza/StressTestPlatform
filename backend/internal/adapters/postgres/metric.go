@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/google/uuid"
@@ -131,6 +132,31 @@ func (r *MetricRepository) GetSummary(executionID uuid.UUID) ([]domain.MetricSum
 		summaries = []domain.MetricSummary{}
 	}
 	return summaries, nil
+}
+
+func (r *MetricRepository) ComputeExecutionSummary(executionID uuid.UUID) (domain.JSONMap, error) {
+	var totalRequests, totalFailures, avgResponse, errorRate float64
+	err := r.pool.QueryRow(context.Background(), `
+		SELECT
+			COALESCE(SUM(CASE WHEN metric_name = 'http_reqs' THEN metric_value END), 0),
+			COALESCE(SUM(CASE WHEN metric_name = 'http_reqs' AND status NOT IN ('200','201') THEN metric_value ELSE 0 END), 0),
+			COALESCE(AVG(CASE WHEN metric_name = 'http_req_duration' THEN metric_value END), 0)
+		FROM k6_metrics WHERE execution_id = $1`, executionID,
+	).Scan(&totalRequests, &totalFailures, &avgResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if totalRequests > 0 {
+		errorRate = math.Round(totalFailures/totalRequests*10000) / 100
+	}
+	avgResponse = math.Round(avgResponse*100) / 100
+
+	return domain.JSONMap{
+		"total_requests":  totalRequests,
+		"avg_response_ms": avgResponse,
+		"error_rate":      errorRate,
+	}, nil
 }
 
 func (r *MetricRepository) DeleteByExecution(executionID uuid.UUID) error {

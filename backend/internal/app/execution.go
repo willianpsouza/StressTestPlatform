@@ -155,6 +155,33 @@ func (s *ExecutionService) List(filter domain.ExecutionFilter) ([]domain.TestExe
 	return s.execRepo.List(filter)
 }
 
+func (s *ExecutionService) RecalculateMetrics(id uuid.UUID, userID uuid.UUID, isRoot bool) (*domain.TestExecution, error) {
+	exec, err := s.execRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if !isRoot && exec.UserID != userID {
+		return nil, domain.NewForbiddenError("Access denied")
+	}
+	if exec.Status == domain.TestStatusRunning || exec.Status == domain.TestStatusPending {
+		return nil, domain.NewValidationError(map[string]string{
+			"status": "Cannot recalculate metrics for running or pending executions",
+		})
+	}
+
+	summary, err := s.metricRepo.ComputeExecutionSummary(exec.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	exec.MetricsSummary = summary
+	if err := s.execRepo.Update(exec); err != nil {
+		return nil, err
+	}
+
+	return exec, nil
+}
+
 func (s *ExecutionService) GetStats() (map[string]interface{}, error) {
 	return s.execRepo.GetStats()
 }

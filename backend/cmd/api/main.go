@@ -160,6 +160,7 @@ func main() {
 			r.Get("/executions/{id}", execHandler.Get)
 			r.Post("/executions/{id}/cancel", execHandler.Cancel)
 			r.Get("/executions/{id}/logs", execHandler.Logs)
+			r.Post("/executions/{id}/recalculate-metrics", execHandler.RecalculateMetrics)
 			r.Delete("/executions/{id}", execHandler.Delete)
 
 			// Delete all finished executions for a test

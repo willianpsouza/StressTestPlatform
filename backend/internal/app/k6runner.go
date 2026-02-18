@@ -183,6 +183,13 @@ func (r *K6Runner) execute(ctx context.Context, cancel context.CancelFunc, execu
 		} else {
 			log.Printf("[K6] Imported %d metric rows for execution %s", imported, execution.ID)
 		}
+
+		// Compute and persist metrics summary
+		if summary, sumErr := r.metricRepo.ComputeExecutionSummary(execution.ID); sumErr != nil {
+			log.Printf("[K6] Failed to compute metrics summary for execution %s: %v", execution.ID, sumErr)
+		} else {
+			execution.MetricsSummary = summary
+		}
 	}
 
 	if err := r.execRepo.Update(execution); err != nil {

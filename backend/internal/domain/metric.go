@@ -38,6 +38,7 @@ type MetricRepository interface {
 	GetTimeseries(executionID uuid.UUID, metricName string) ([]MetricDatapoint, error)
 	GetMetricNames(executionID uuid.UUID) ([]string, error)
 	GetSummary(executionID uuid.UUID) ([]MetricSummary, error)
+	ComputeExecutionSummary(executionID uuid.UUID) (JSONMap, error)
 	DeleteByExecution(executionID uuid.UUID) error
 
 	// Grafana queries — filter by domain/test/date

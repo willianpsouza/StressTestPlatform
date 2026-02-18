@@ -166,13 +166,16 @@ export default function DashboardPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VUs</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duracao</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Requests</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Response</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Error Rate</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {executions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={10} className="px-6 py-8 text-center text-gray-400">
                     Nenhuma execucao encontrada
                   </td>
                 </tr>
@@ -189,6 +192,9 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">{exec.vus}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{exec.duration}</td>
+                    <MetricCell value={exec.metrics_summary?.total_requests} format="number" />
+                    <MetricCell value={exec.metrics_summary?.avg_response_ms} format="ms" thresholds={[200, 500]} />
+                    <MetricCell value={exec.metrics_summary?.error_rate} format="percent" thresholds={[1, 5]} />
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDate(exec.created_at)}</td>
                   </tr>
                 ))
@@ -208,4 +214,24 @@ function StatCard({ label, value, color = 'text-gray-900' }: { label: string; va
       <p className={cn('text-3xl font-bold mt-1', color)}>{value}</p>
     </div>
   )
+}
+
+function MetricCell({ value, format, thresholds }: { value: unknown; format: 'number' | 'ms' | 'percent'; thresholds?: [number, number] }) {
+  if (value == null) {
+    return <td className="px-6 py-4 text-sm text-right text-gray-300">—</td>
+  }
+  const num = Number(value)
+  let display: string
+  if (format === 'number') display = num.toLocaleString()
+  else if (format === 'ms') display = `${num} ms`
+  else display = `${num}%`
+
+  let color = 'text-gray-500'
+  if (thresholds) {
+    if (num > thresholds[1]) color = 'text-red-600'
+    else if (num > thresholds[0]) color = 'text-yellow-600'
+    else color = 'text-green-600'
+  }
+
+  return <td className={cn('px-6 py-4 text-sm text-right', color)}>{display}</td>
 }

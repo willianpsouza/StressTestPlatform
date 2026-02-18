@@ -1,10 +1,23 @@
 package app
 
 import (
+	"time"
+
 	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 
 	"github.com/willianpsouza/StressTestPlatform/internal/domain"
 )
+
+func nextCronRun(expression string) *time.Time {
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	sched, err := parser.Parse(expression)
+	if err != nil {
+		return nil
+	}
+	t := sched.Next(time.Now())
+	return &t
+}
 
 type ScheduleService struct {
 	scheduleRepo domain.ScheduleRepository
@@ -49,12 +62,20 @@ func (s *ScheduleService) Create(userID uuid.UUID, input domain.CreateScheduleIn
 		duration = test.DefaultDuration
 	}
 
+	// For recurring schedules, compute the first next_run_at from cron expression
+	nextRunAt := input.NextRunAt
+	if input.ScheduleType == domain.ScheduleTypeRecurring && input.CronExpression != nil {
+		if nextRunAt == nil {
+			nextRunAt = nextCronRun(*input.CronExpression)
+		}
+	}
+
 	schedule := &domain.Schedule{
 		TestID:         input.TestID,
 		UserID:         userID,
 		ScheduleType:   input.ScheduleType,
 		CronExpression: input.CronExpression,
-		NextRunAt:      input.NextRunAt,
+		NextRunAt:      nextRunAt,
 		VUs:            vus,
 		Duration:       duration,
 		Status:         domain.ScheduleStatusActive,
@@ -142,6 +163,12 @@ func (s *ScheduleService) Resume(id uuid.UUID, userID uuid.UUID, isRoot bool) (*
 	}
 
 	schedule.Status = domain.ScheduleStatusActive
+
+	// Recalculate next_run_at for recurring schedules
+	if schedule.ScheduleType == domain.ScheduleTypeRecurring && schedule.CronExpression != nil {
+		schedule.NextRunAt = nextCronRun(*schedule.CronExpression)
+	}
+
 	if err := s.scheduleRepo.Update(schedule); err != nil {
 		return nil, err
 	}
