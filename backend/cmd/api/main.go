@@ -17,8 +17,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	goredis "github.com/redis/go-redis/v9"
 
+	"github.com/willianpsouza/StressTestPlatform/internal/adapters/grafana"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/http/handlers"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/http/middleware"
+	"github.com/willianpsouza/StressTestPlatform/internal/adapters/influxdb"
 	"github.com/willianpsouza/StressTestPlatform/internal/adapters/postgres"
 	redisadapter "github.com/willianpsouza/StressTestPlatform/internal/adapters/redis"
 	"github.com/willianpsouza/StressTestPlatform/internal/app"
@@ -54,19 +56,30 @@ func main() {
 	defer redisClient.Close()
 	log.Println("Connected to Redis")
 
+	// External clients
+	influxClient := influxdb.NewClient(cfg.InfluxDB)
+	grafanaClient := grafana.NewClient(cfg.Grafana)
+	_ = grafanaClient // Used in Phase 4
+
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
 	sessionRepo := postgres.NewSessionRepository(dbPool)
+	domainRepo := postgres.NewDomainRepository(dbPool)
+	testRepo := postgres.NewTestRepository(dbPool)
 
 	// Cache
 	_ = redisadapter.NewCache(redisClient)
 
 	// Services
 	authService := app.NewAuthService(cfg.JWT, userRepo, sessionRepo)
+	domainService := app.NewDomainService(domainRepo)
+	testService := app.NewTestService(testRepo, domainRepo, influxClient, cfg.K6)
 
 	// Handlers
 	healthHandler := handlers.NewHealthHandler(dbPool, redisClient, cfg)
 	authHandler := handlers.NewAuthHandler(authService)
+	domainHandler := handlers.NewDomainHandler(domainService)
+	testHandler := handlers.NewTestHandler(testService)
 
 	// Router
 	r := chi.NewRouter()
@@ -111,6 +124,21 @@ func main() {
 			r.Get("/auth/me", authHandler.Me)
 			r.Put("/auth/me", authHandler.UpdateProfile)
 			r.Post("/auth/change-password", authHandler.ChangePassword)
+
+			// Domains
+			r.Get("/domains", domainHandler.List)
+			r.Post("/domains", domainHandler.Create)
+			r.Get("/domains/{id}", domainHandler.Get)
+			r.Put("/domains/{id}", domainHandler.Update)
+			r.Delete("/domains/{id}", domainHandler.Delete)
+
+			// Tests
+			r.Get("/tests", testHandler.List)
+			r.Post("/tests", testHandler.Create)
+			r.Get("/tests/{id}", testHandler.Get)
+			r.Put("/tests/{id}", testHandler.Update)
+			r.Put("/tests/{id}/script", testHandler.UpdateScript)
+			r.Delete("/tests/{id}", testHandler.Delete)
 
 			// ROOT-only: user management
 			r.Group(func(r chi.Router) {
