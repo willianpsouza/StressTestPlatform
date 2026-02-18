@@ -33,6 +33,7 @@ k6_scripts/
 /backend/api
 /backend/migrate
 /backend/seed
+/testapi/testapi
 
 # Logs
 *.log
