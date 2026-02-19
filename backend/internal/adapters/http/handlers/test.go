@@ -95,7 +95,7 @@ func (h *TestHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	test, err := h.testService.Create(claims.UserID, input, header.Filename, file, header.Size)
+	test, err := h.testService.Create(claims.UserID, claims.Role == domain.UserRoleRoot, input, header.Filename, file, header.Size)
 	if err != nil {
 		response.Error(w, err)
 		return

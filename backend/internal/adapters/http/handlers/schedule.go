@@ -30,7 +30,7 @@ func (h *ScheduleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schedule, err := h.scheduleService.Create(claims.UserID, input)
+	schedule, err := h.scheduleService.Create(claims.UserID, claims.Role == domain.UserRoleRoot, input)
 	if err != nil {
 		response.Error(w, err)
 		return

@@ -27,13 +27,13 @@ func NewExecutionService(
 	}
 }
 
-func (s *ExecutionService) Create(userID uuid.UUID, input domain.CreateExecutionInput) (*domain.TestExecution, error) {
+func (s *ExecutionService) Create(userID uuid.UUID, isRoot bool, input domain.CreateExecutionInput) (*domain.TestExecution, error) {
 	// Verify test exists and user owns it
 	test, err := s.testRepo.GetByID(input.TestID)
 	if err != nil {
 		return nil, err
 	}
-	if test.UserID != userID {
+	if !isRoot && test.UserID != userID {
 		return nil, domain.NewForbiddenError("Access denied")
 	}
 

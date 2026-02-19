@@ -147,7 +147,7 @@ func handleVariablesDomains(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFun
 			SELECT DISTINCT d.name
 			FROM domains d
 			JOIN tests t ON t.domain_id = d.id
-			JOIN k6_metrics m ON m.test_id = t.id
+			WHERE d.deleted_at IS NULL
 			ORDER BY d.name`)
 		if err != nil {
 			writeError(w, 500, err.Error())
@@ -187,8 +187,8 @@ func handleVariablesTests(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc 
 			SELECT DISTINCT t.name
 			FROM tests t
 			JOIN domains d ON d.id = t.domain_id
-			JOIN k6_metrics m ON m.test_id = t.id
 			WHERE d.name = $1
+			  AND t.deleted_at IS NULL
 			ORDER BY t.name`, domain)
 		if err != nil {
 			writeError(w, 500, err.Error())

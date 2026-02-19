@@ -30,7 +30,7 @@ func (h *ExecutionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exec, err := h.execService.Create(claims.UserID, input)
+	exec, err := h.execService.Create(claims.UserID, claims.Role == domain.UserRoleRoot, input)
 	if err != nil {
 		response.Error(w, err)
 		return

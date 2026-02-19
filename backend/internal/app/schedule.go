@@ -31,13 +31,13 @@ func NewScheduleService(scheduleRepo domain.ScheduleRepository, testRepo domain.
 	}
 }
 
-func (s *ScheduleService) Create(userID uuid.UUID, input domain.CreateScheduleInput) (*domain.Schedule, error) {
+func (s *ScheduleService) Create(userID uuid.UUID, isRoot bool, input domain.CreateScheduleInput) (*domain.Schedule, error) {
 	// Verify test ownership
 	test, err := s.testRepo.GetByID(input.TestID)
 	if err != nil {
 		return nil, err
 	}
-	if test.UserID != userID {
+	if !isRoot && test.UserID != userID {
 		return nil, domain.NewForbiddenError("Access denied")
 	}
 

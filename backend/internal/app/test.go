@@ -31,7 +31,7 @@ func NewTestService(
 	}
 }
 
-func (s *TestService) Create(userID uuid.UUID, input domain.CreateTestInput, filename string, scriptReader io.Reader, scriptSize int64) (*domain.Test, error) {
+func (s *TestService) Create(userID uuid.UUID, isRoot bool, input domain.CreateTestInput, filename string, scriptReader io.Reader, scriptSize int64) (*domain.Test, error) {
 	if input.Name == "" {
 		return nil, domain.NewValidationError(map[string]string{
 			"name": "Name is required",
@@ -55,7 +55,7 @@ func (s *TestService) Create(userID uuid.UUID, input domain.CreateTestInput, fil
 	if err != nil {
 		return nil, err
 	}
-	if d.UserID != userID {
+	if !isRoot && d.UserID != userID {
 		return nil, domain.NewForbiddenError("Access denied")
 	}
 
