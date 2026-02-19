@@ -876,7 +876,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -970,7 +970,7 @@
             "lineWidth": 1,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -1045,7 +1045,7 @@
             "lineWidth": 1,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "ms"
         },
@@ -1123,7 +1123,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -1202,7 +1202,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -1288,7 +1288,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "ms"
         },
@@ -1418,7 +1418,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "reqps"
         },
@@ -1496,7 +1496,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -1573,7 +1573,7 @@
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
-            "spanNulls": false
+            "spanNulls": 30000
           },
           "unit": "short"
         },
@@ -1873,31 +1873,15 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "yesoreyeram-infinity-datasource",
-          "uid": "stresstest-metrics-api"
+          "type": "grafana-postgresql-datasource",
+          "uid": "stresstest-postgres"
         },
-        "definition": "",
+        "definition": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id WHERE d.deleted_at IS NULL ORDER BY d.name",
         "includeAll": true,
         "label": "Domain",
         "multi": false,
         "name": "domain",
-        "query": {
-          "type": "json",
-          "source": "url",
-          "data": "",
-          "url": "http://metrics-api:8081/grafana/variables/domains",
-          "root_selector": "",
-          "columns": [
-            {
-              "selector": "",
-              "text": "",
-              "type": "string"
-            }
-          ],
-          "url_options": {
-            "method": "GET"
-          }
-        },
+        "query": "SELECT DISTINCT d.name FROM domains d JOIN tests t ON t.domain_id = d.id WHERE d.deleted_at IS NULL ORDER BY d.name",
         "refresh": 2,
         "sort": 1,
         "type": "query"
@@ -1909,31 +1893,15 @@
           "value": "$__all"
         },
         "datasource": {
-          "type": "yesoreyeram-infinity-datasource",
-          "uid": "stresstest-metrics-api"
+          "type": "grafana-postgresql-datasource",
+          "uid": "stresstest-postgres"
         },
-        "definition": "",
+        "definition": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id WHERE ('${domain}' = '$__all' OR d.name = '${domain}') AND t.deleted_at IS NULL ORDER BY t.name",
         "includeAll": true,
         "label": "Test",
         "multi": false,
         "name": "test",
-        "query": {
-          "type": "json",
-          "source": "url",
-          "data": "",
-          "url": "http://metrics-api:8081/grafana/variables/tests?domain=${domain}",
-          "root_selector": "",
-          "columns": [
-            {
-              "selector": "",
-              "text": "",
-              "type": "string"
-            }
-          ],
-          "url_options": {
-            "method": "GET"
-          }
-        },
+        "query": "SELECT DISTINCT t.name FROM tests t JOIN domains d ON d.id = t.domain_id WHERE ('${domain}' = '$__all' OR d.name = '${domain}') AND t.deleted_at IS NULL ORDER BY t.name",
         "refresh": 2,
         "sort": 1,
         "type": "query"

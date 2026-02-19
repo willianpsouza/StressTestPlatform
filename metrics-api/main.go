@@ -155,15 +155,19 @@ func handleVariablesDomains(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFun
 		}
 		defer rows.Close()
 
-		names := make([]string, 0)
+		type varItem struct {
+			Text  string `json:"__text"`
+			Value string `json:"__value"`
+		}
+		items := make([]varItem, 0)
 		for rows.Next() {
 			var n string
 			if err := rows.Scan(&n); err == nil {
-				names = append(names, n)
+				items = append(items, varItem{Text: n, Value: n})
 			}
 		}
 
-		data := marshal(names)
+		data := marshal(items)
 		cacheSet(rdb, key, data)
 		writeJSON(w, data)
 	}
@@ -196,15 +200,19 @@ func handleVariablesTests(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc 
 		}
 		defer rows.Close()
 
-		names := make([]string, 0)
+		type varItem struct {
+			Text  string `json:"__text"`
+			Value string `json:"__value"`
+		}
+		items := make([]varItem, 0)
 		for rows.Next() {
 			var n string
 			if err := rows.Scan(&n); err == nil {
-				names = append(names, n)
+				items = append(items, varItem{Text: n, Value: n})
 			}
 		}
 
-		data := marshal(names)
+		data := marshal(items)
 		cacheSet(rdb, key, data)
 		writeJSON(w, data)
 	}
@@ -579,6 +587,76 @@ type pgxRows interface {
 	Close()
 }
 
+// fillTimeGaps takes serialized timeseries JSON and inserts zero-value rows
+// for gaps larger than 2x the interval. This prevents Grafana from drawing
+// continuous lines between separate test executions.
+func fillTimeGaps(raw []byte, intervalSec int) []byte {
+	var rows []map[string]any
+	if err := json.Unmarshal(raw, &rows); err != nil || len(rows) < 2 {
+		return raw
+	}
+
+	maxGap := time.Duration(intervalSec*2) * time.Second
+	step := time.Duration(intervalSec) * time.Second
+	var result []map[string]any
+
+	for i, row := range rows {
+		result = append(result, row)
+		if i >= len(rows)-1 {
+			continue
+		}
+
+		t1, ok1 := parseJSONTime(row["time"])
+		t2, ok2 := parseJSONTime(rows[i+1]["time"])
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		if t2.Sub(t1) > maxGap {
+			// Build a zero-value row (copy keys, set numerics to 0)
+			zeroRow := map[string]any{"time": t1.Add(step).Format(time.RFC3339Nano)}
+			for k := range row {
+				if k != "time" {
+					zeroRow[k] = 0
+				}
+			}
+			result = append(result, zeroRow)
+
+			// Also insert a zero row just before the next data point
+			zeroRow2 := map[string]any{"time": t2.Add(-step).Format(time.RFC3339Nano)}
+			for k := range row {
+				if k != "time" {
+					zeroRow2[k] = 0
+				}
+			}
+			result = append(result, zeroRow2)
+		}
+	}
+
+	out, err := json.Marshal(result)
+	if err != nil {
+		return raw
+	}
+	return out
+}
+
+func parseJSONTime(v any) (time.Time, bool) {
+	s, ok := v.(string)
+	if !ok {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05Z",
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
 func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, query string, scanner func(pgxRows) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
@@ -609,7 +687,7 @@ func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, query string, scanner 
 			return
 		}
 
-		data := marshal(result)
+		data := fillTimeGaps(marshal(result), interval)
 		cacheSet(rdb, key, data)
 		writeJSON(w, data)
 	}
