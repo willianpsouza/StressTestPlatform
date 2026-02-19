@@ -5,13 +5,28 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { Test, Schedule } from '@/types'
 
+const cronPresets = [
+  { label: 'Every minute', value: '* * * * *' },
+  { label: 'Every 5 minutes', value: '*/5 * * * *' },
+  { label: 'Every 10 minutes', value: '*/10 * * * *' },
+  { label: 'Every 15 minutes', value: '*/15 * * * *' },
+  { label: 'Every 30 minutes', value: '*/30 * * * *' },
+  { label: 'Every hour', value: '0 * * * *' },
+  { label: 'Every 2 hours', value: '0 */2 * * *' },
+  { label: 'Every 6 hours', value: '0 */6 * * *' },
+  { label: 'Every 12 hours', value: '0 */12 * * *' },
+  { label: 'Once a day (midnight)', value: '0 0 * * *' },
+]
+
 export default function NewSchedulePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [tests, setTests] = useState<Test[]>([])
   const [testId, setTestId] = useState(searchParams.get('test_id') || '')
   const [scheduleType, setScheduleType] = useState<'ONCE' | 'RECURRING'>('ONCE')
-  const [cronExpression, setCronExpression] = useState('')
+  const [cronPreset, setCronPreset] = useState('*/5 * * * *')
+  const [cronExpression, setCronExpression] = useState('*/5 * * * *')
+  const [isCustomCron, setIsCustomCron] = useState(false)
   const [nextRunAt, setNextRunAt] = useState('')
   const [vus, setVus] = useState('1')
   const [duration, setDuration] = useState('30s')
@@ -119,12 +134,38 @@ export default function NewSchedulePage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
           </div>
         ) : (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cron Expression</label>
-            <input type="text" value={cronExpression} onChange={(e) => setCronExpression(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
-              placeholder="*/30 * * * *" required />
-            <p className="mt-1 text-xs text-gray-400">Format: minute hour day month day_of_week</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+              <select
+                value={isCustomCron ? '__custom__' : cronPreset}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') {
+                    setIsCustomCron(true)
+                    setCronExpression('')
+                  } else {
+                    setIsCustomCron(false)
+                    setCronPreset(e.target.value)
+                    setCronExpression(e.target.value)
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {cronPresets.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label} ({p.value})</option>
+                ))}
+                <option value="__custom__">Custom...</option>
+              </select>
+            </div>
+            {isCustomCron && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cron Expression</label>
+                <input type="text" value={cronExpression} onChange={(e) => setCronExpression(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
+                  placeholder="*/30 * * * *" required />
+                <p className="mt-1 text-xs text-gray-400">Format: minute hour day month day_of_week</p>
+              </div>
+            )}
           </div>
         )}
 
