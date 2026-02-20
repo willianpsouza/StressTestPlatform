@@ -4,7 +4,7 @@
 FROM grafana/k6:latest AS k6
 
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache git gcc musl-dev
 

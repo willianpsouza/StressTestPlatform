@@ -2,6 +2,7 @@ package app
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -14,7 +15,8 @@ type Scheduler struct {
 	execRepo     domain.ExecutionRepository
 	runner       *K6Runner
 	ticker       *time.Ticker
-	done         chan bool
+	done         chan struct{}
+	stopOnce     sync.Once
 }
 
 func NewScheduler(
@@ -26,7 +28,7 @@ func NewScheduler(
 		scheduleRepo: scheduleRepo,
 		execRepo:     execRepo,
 		runner:       runner,
-		done:         make(chan bool),
+		done:         make(chan struct{}),
 	}
 }
 
@@ -47,11 +49,13 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) Stop() {
-	if s.ticker != nil {
-		s.ticker.Stop()
-	}
-	s.done <- true
-	log.Println("[Scheduler] Stopped")
+	s.stopOnce.Do(func() {
+		if s.ticker != nil {
+			s.ticker.Stop()
+		}
+		close(s.done)
+		log.Println("[Scheduler] Stopped")
+	})
 }
 
 func (s *Scheduler) poll() {

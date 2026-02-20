@@ -52,23 +52,22 @@ func (r *K6Runner) CountRunning(userID uuid.UUID) int {
 }
 
 func (r *K6Runner) Run(execution *domain.TestExecution) error {
+	// Check concurrency limit (short lock, map read only)
 	r.mu.Lock()
-	count := len(r.running[execution.UserID])
-	if count >= r.k6Config.MaxConcurrent {
+	if len(r.running[execution.UserID]) >= r.k6Config.MaxConcurrent {
 		r.mu.Unlock()
 		return domain.NewTooManyRequestsError(
 			fmt.Sprintf("Maximum %d concurrent tests per user", r.k6Config.MaxConcurrent),
 		)
 	}
+	r.mu.Unlock()
 
-	// Get test info
+	// I/O and parsing outside the lock
 	test, err := r.testRepo.GetByID(execution.TestID)
 	if err != nil {
-		r.mu.Unlock()
 		return err
 	}
 
-	// Cap VUs and duration
 	vus := execution.VUs
 	if vus > r.k6Config.MaxVUs {
 		vus = r.k6Config.MaxVUs
@@ -82,16 +81,23 @@ func (r *K6Runner) Run(execution *domain.TestExecution) error {
 		dur = r.k6Config.MaxDuration
 	}
 
-	// Context with timeout (duration + 30s buffer)
 	ctx, cancel := context.WithTimeout(context.Background(), dur+30*time.Second)
 
+	// Re-check and register under lock (prevents race between check and register)
+	r.mu.Lock()
+	if len(r.running[execution.UserID]) >= r.k6Config.MaxConcurrent {
+		r.mu.Unlock()
+		cancel()
+		return domain.NewTooManyRequestsError(
+			fmt.Sprintf("Maximum %d concurrent tests per user", r.k6Config.MaxConcurrent),
+		)
+	}
 	if r.running[execution.UserID] == nil {
 		r.running[execution.UserID] = make(map[uuid.UUID]context.CancelFunc)
 	}
 	r.running[execution.UserID][execution.ID] = cancel
 	r.mu.Unlock()
 
-	// Run in goroutine
 	go r.execute(ctx, cancel, execution, test, vus, dur)
 
 	return nil

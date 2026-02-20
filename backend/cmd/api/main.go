@@ -31,7 +31,15 @@ func main() {
 	log.Printf("Starting %s (env=%s, project=%s)", cfg.App.Name, cfg.App.Env, cfg.App.ProjectName)
 
 	// PostgreSQL
-	dbPool, err := pgxpool.New(context.Background(), cfg.Database.URL)
+	dbConfig, err := pgxpool.ParseConfig(cfg.Database.URL)
+	if err != nil {
+		log.Fatalf("Failed to parse database URL: %v", err)
+	}
+	dbConfig.MaxConns = int32(cfg.Database.MaxOpenConns)
+	dbConfig.MinConns = int32(cfg.Database.MaxIdleConns)
+	dbConfig.MaxConnLifetime = cfg.Database.ConnMaxLifetime
+
+	dbPool, err := pgxpool.NewWithConfig(context.Background(), dbConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to PostgreSQL: %v", err)
 	}
@@ -105,12 +113,11 @@ func main() {
 
 	// CORS
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
+		ExposedHeaders: []string{"Link"},
+		MaxAge:         300,
 	}))
 
 	// Health endpoints
