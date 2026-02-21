@@ -190,11 +190,18 @@ func (r *K6Runner) execute(ctx context.Context, cancel context.CancelFunc, execu
 			log.Printf("[K6] Imported %d metric rows for execution %s", imported, execution.ID)
 		}
 
-		// Compute and persist metrics summary
+		// Compute and persist metrics summary (must run before aggregation since it reads raw data)
 		if summary, sumErr := r.metricRepo.ComputeExecutionSummary(execution.ID); sumErr != nil {
 			log.Printf("[K6] Failed to compute metrics summary for execution %s: %v", execution.ID, sumErr)
 		} else {
 			execution.MetricsSummary = summary
+		}
+
+		// Aggregate metrics into k6_metrics_aggregated and clean up raw data
+		if aggErr := r.metricRepo.AggregateAndCleanup(execution.ID); aggErr != nil {
+			log.Printf("[K6] Failed to aggregate metrics for execution %s: %v", execution.ID, aggErr)
+		} else {
+			log.Printf("[K6] Aggregated and cleaned up raw metrics for execution %s", execution.ID)
 		}
 	}
 

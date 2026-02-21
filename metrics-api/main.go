@@ -249,30 +249,42 @@ func handleGrafanaStats(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
 		}
 
 		query := `
-WITH params AS (
-  SELECT m.* FROM k6_metrics m
-  JOIN tests t ON t.id = m.test_id
+WITH exec_ids AS (
+  SELECT e.id
+  FROM test_executions e
+  JOIN tests t ON t.id = e.test_id
   JOIN domains d ON d.id = t.domain_id
   WHERE ($1 = '' OR d.name = $1)
     AND ($2 = '' OR t.name = $2)
-    AND m.timestamp >= $3 AND m.timestamp <= $4
+    AND e.started_at >= $3 AND e.started_at <= $4
+    AND e.status IN ('COMPLETED', 'FAILED')
+),
+summaries AS (
+  SELECT * FROM k6_metrics_aggregated
+  WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE
+),
+buckets AS (
+  SELECT * FROM k6_metrics_aggregated
+  WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = FALSE
 )
 SELECT
-  COALESCE((SELECT SUM(metric_value) FROM params WHERE metric_name = 'http_reqs'), 0) AS requests,
-  COALESCE((SELECT SUM(metric_value) FROM params WHERE metric_name = 'http_reqs' AND status NOT IN ('200','201')), 0) AS failures,
+  COALESCE((SELECT SUM(sum_value) FROM summaries WHERE metric_name = 'http_reqs' AND url IS NULL), 0) AS requests,
+  COALESCE((SELECT SUM(sum_value) FROM summaries WHERE metric_name = 'http_reqs' AND url IS NOT NULL AND status NOT IN ('200','201')), 0) AS failures,
   COALESCE((SELECT MAX(rps) FROM (
-    SELECT SUM(metric_value) / $5 AS rps
-    FROM params WHERE metric_name = 'http_reqs'
-    GROUP BY floor(extract(epoch FROM timestamp) / $5)
+    SELECT SUM(sum_value) / $5 AS rps
+    FROM buckets WHERE metric_name = 'http_reqs'
+    GROUP BY floor(extract(epoch FROM bucket_time) / $5)
   ) sub), 0) AS peak_rps,
-  COALESCE((SELECT SUM(CASE WHEN status NOT IN ('200','201') THEN metric_value ELSE 0 END) * 100.0
-    / NULLIF(SUM(metric_value), 0)
-    FROM params WHERE metric_name = 'http_reqs'), 0) AS error_rate,
-  COALESCE((SELECT AVG(metric_value) FROM params WHERE metric_name = 'http_req_duration'), 0) AS avg_response,
-  COALESCE((SELECT PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY metric_value) FROM params WHERE metric_name = 'http_req_duration'), 0) AS p90,
-  COALESCE((SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY metric_value) FROM params WHERE metric_name = 'http_req_duration'), 0) AS p95,
-  COALESCE((SELECT MAX(metric_value) FROM params WHERE metric_name = 'http_req_duration'), 0) AS max_response,
-  COALESCE((SELECT MAX(metric_value) FROM params WHERE metric_name = 'vus_max'), 0) AS vus_max`
+  COALESCE((SELECT SUM(CASE WHEN status NOT IN ('200','201') THEN sum_value ELSE 0 END) * 100.0
+    / NULLIF((SELECT SUM(sum_value) FROM summaries WHERE metric_name = 'http_reqs' AND url IS NULL), 0)
+    FROM summaries WHERE metric_name = 'http_reqs' AND url IS NOT NULL), 0) AS error_rate,
+  COALESCE((SELECT SUM(avg_value * count) / NULLIF(SUM(count), 0) FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL), 0) AS avg_response,
+  COALESCE((SELECT MAX(p90) FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL), 0) AS p90,
+  COALESCE((SELECT MAX(p95) FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL), 0) AS p95,
+  COALESCE((SELECT MAX(max_value) FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL), 0) AS max_response,
+  COALESCE((SELECT MAX(max_value) FROM summaries WHERE metric_name = 'vus_max' AND url IS NULL), 0) AS vus_max`
 
 		var s statsRow
 		err := db.QueryRow(r.Context(), query, domain, test, from, to, float64(interval)).Scan(
@@ -307,24 +319,49 @@ SELECT
 // Grafana Timeseries Endpoints
 // ---------------------------------------------------------------------------
 
-// Base query for common filter joins
-const tsBaseFrom = `FROM k6_metrics m
+// Base FROM for per-second bucket queries (time range <= 12h)
+const tsBaseBucket = `FROM k6_metrics_aggregated m
 JOIN tests t ON t.id = m.test_id
 JOIN domains d ON d.id = t.domain_id
 WHERE ($1 = '' OR d.name = $1)
   AND ($2 = '' OR t.name = $2)
-  AND m.timestamp >= $3 AND m.timestamp <= $4`
+  AND m.bucket_time >= $3 AND m.bucket_time <= $4
+  AND m.is_summary = FALSE`
+
+const longRangeThreshold = 12 * time.Hour
 
 func handleTSAll(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "all", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' THEN m.metric_value END), 0) AS requests,
-  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' THEN m.metric_value END) / $5, 0) AS rps,
-  COALESCE(SUM(CASE WHEN m.metric_name = 'iterations' THEN m.metric_value END), 0) AS iterations,
-  COALESCE(AVG(CASE WHEN m.metric_name = 'http_req_duration' THEN m.metric_value END), 0) AS response_time,
-  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' AND m.status NOT IN ('200','201') THEN m.metric_value END), 0) AS failures
-`+tsBaseFrom+`
-GROUP BY 1 ORDER BY 1`,
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' THEN m.sum_value END), 0) AS requests,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' THEN m.sum_value END) / $5, 0) AS rps,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'iterations' THEN m.sum_value END), 0) AS iterations,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'http_req_duration' THEN m.avg_value * m.count END)
+    / NULLIF(SUM(CASE WHEN m.metric_name = 'http_req_duration' THEN m.count END), 0), 0) AS response_time,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' AND m.status NOT IN ('200','201') THEN m.sum_value END), 0) AS failures
+` + tsBaseBucket + `
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(CASE WHEN m.metric_name = 'http_reqs' AND m.url IS NULL THEN m.sum_value END), 0) AS requests,
+  COALESCE(MAX(CASE WHEN m.metric_name = 'http_reqs' AND m.url IS NULL THEN m.sum_value END)
+    / NULLIF(EXTRACT(EPOCH FROM (e.completed_at - e.started_at)), 0), 0) AS rps,
+  COALESCE(MAX(CASE WHEN m.metric_name = 'iterations' AND m.url IS NULL THEN m.sum_value END), 0) AS iterations,
+  COALESCE(MAX(CASE WHEN m.metric_name = 'http_req_duration' AND m.url IS NULL THEN m.avg_value END), 0) AS response_time,
+  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' AND m.url IS NOT NULL AND m.status NOT IN ('200','201') THEN m.sum_value END), 0) AS failures
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id AND m.is_summary = TRUE
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at, e.completed_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "all", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time         time.Time `json:"time"`
@@ -350,12 +387,30 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSErrors(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "errors", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  COALESCE(SUM(m.metric_value), 0) AS errors
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  COALESCE(SUM(m.sum_value), 0) AS errors
+` + tsBaseBucket + `
   AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200','201')
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(SUM(m.sum_value), 0) AS errors
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NOT NULL
+  AND m.metric_name = 'http_reqs' AND m.status NOT IN ('200','201')
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "errors", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time   time.Time `json:"time"`
@@ -377,12 +432,30 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSResponseHistogram(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "response-histogram", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  AVG(m.metric_value) AS avg_response
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  SUM(m.avg_value * m.count) / NULLIF(SUM(m.count), 0) AS avg_response
+` + tsBaseBucket + `
   AND m.metric_name = 'http_req_duration'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.avg_value), 0) AS avg_response
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'http_req_duration'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "response-histogram", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time        time.Time `json:"time"`
@@ -404,12 +477,30 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSRequests(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "requests", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  SUM(m.metric_value) AS requests
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  SUM(m.sum_value) AS requests
+` + tsBaseBucket + `
   AND m.metric_name = 'http_reqs'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.sum_value), 0) AS requests
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'http_reqs'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "requests", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time     time.Time `json:"time"`
@@ -431,12 +522,30 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSVus(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "vus", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  AVG(m.metric_value) AS vus
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  MAX(m.max_value) AS vus
+` + tsBaseBucket + `
   AND m.metric_name = 'vus'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.max_value), 0) AS vus
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'vus'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "vus", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time time.Time `json:"time"`
@@ -458,14 +567,34 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSPercentiles(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "percentiles", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  AVG(m.metric_value) AS median,
-  PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value) AS p90,
-  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value) AS p95
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  SUM(m.p50 * m.count) / NULLIF(SUM(m.count), 0) AS median,
+  MAX(m.p90) AS p90,
+  MAX(m.p95) AS p95
+` + tsBaseBucket + `
   AND m.metric_name = 'http_req_duration'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.p50), 0) AS median,
+  COALESCE(MAX(m.p90), 0) AS p90,
+  COALESCE(MAX(m.p95), 0) AS p95
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'http_req_duration'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "percentiles", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time   time.Time `json:"time"`
@@ -489,12 +618,31 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSRps(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "rps", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  SUM(m.metric_value) / $5 AS rps
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  SUM(m.sum_value) / $5 AS rps
+` + tsBaseBucket + `
   AND m.metric_name = 'http_reqs'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.sum_value)
+    / NULLIF(EXTRACT(EPOCH FROM (e.completed_at - e.started_at)), 0), 0) AS rps
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'http_reqs'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at, e.completed_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "rps", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time time.Time `json:"time"`
@@ -516,12 +664,30 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSIterations(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "iterations", `
-SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-  SUM(m.metric_value) AS iterations
-`+tsBaseFrom+`
+	bucketQ := `
+SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+  SUM(m.sum_value) AS iterations
+` + tsBaseBucket + `
   AND m.metric_name = 'iterations'
-GROUP BY 1 ORDER BY 1`,
+GROUP BY 1 ORDER BY 1`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(MAX(m.sum_value), 0) AS iterations
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+  AND m.metric_name = 'iterations'
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "iterations", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time       time.Time `json:"time"`
@@ -543,23 +709,44 @@ GROUP BY 1 ORDER BY 1`,
 }
 
 func handleTSReqPerVU(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return tsHandler(db, rdb, "req-per-vu", `
+	bucketQ := `
 SELECT r.time, COALESCE(r.reqs / NULLIF(v.vus, 0), 0) AS req_per_vu
 FROM (
-  SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-    SUM(m.metric_value) AS reqs
-  `+tsBaseFrom+`
+  SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+    SUM(m.sum_value) AS reqs
+  ` + tsBaseBucket + `
     AND m.metric_name = 'http_reqs'
   GROUP BY 1
 ) r
 LEFT JOIN (
-  SELECT to_timestamp(floor(extract(epoch FROM m.timestamp) / $5) * $5) AS time,
-    MAX(m.metric_value) AS vus
-  `+tsBaseFrom+`
+  SELECT to_timestamp(floor(extract(epoch FROM m.bucket_time) / $5) * $5) AS time,
+    MAX(m.max_value) AS vus
+  ` + tsBaseBucket + `
     AND m.metric_name = 'vus'
   GROUP BY 1
 ) v ON r.time = v.time
-ORDER BY r.time`,
+ORDER BY r.time`
+
+	summaryQ := `
+SELECT e.started_at AS time,
+  COALESCE(
+    MAX(CASE WHEN m.metric_name = 'http_reqs' THEN m.sum_value END)
+    / NULLIF(MAX(CASE WHEN m.metric_name = 'vus' THEN m.max_value END), 0),
+    0
+  ) AS req_per_vu
+FROM test_executions e
+JOIN tests t ON t.id = e.test_id
+JOIN domains d ON d.id = t.domain_id
+LEFT JOIN k6_metrics_aggregated m ON m.execution_id = e.id
+  AND m.is_summary = TRUE AND m.url IS NULL
+WHERE ($1 = '' OR d.name = $1)
+  AND ($2 = '' OR t.name = $2)
+  AND e.started_at >= $3 AND e.started_at <= $4
+  AND e.status IN ('COMPLETED', 'FAILED')
+GROUP BY e.id, e.started_at
+ORDER BY e.started_at`
+
+	return tsHandler(db, rdb, "req-per-vu", bucketQ, summaryQ,
 		func(rows pgxRows) (any, error) {
 			type row struct {
 				Time     time.Time `json:"time"`
@@ -657,12 +844,18 @@ func parseJSONTime(v any) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, query string, scanner func(pgxRows) (any, error)) http.HandlerFunc {
+func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, bucketQuery, summaryQuery string, scanner func(pgxRows) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		domain := r.URL.Query().Get("domain")
 		test := r.URL.Query().Get("test")
 		from, to := parseTimeRange(r)
 		interval := intervalSeconds(r)
+
+		isLongRange := to.Sub(from) > longRangeThreshold
+		query := bucketQuery
+		if isLongRange {
+			query = summaryQuery
+		}
 
 		key := fmt.Sprintf("m:ts:%s:%s:%s:%d:%d:%d", name, domain, test, from.Unix(), to.Unix(), interval)
 		if cached, ok := cacheGet(rdb, key); ok {
@@ -670,9 +863,13 @@ func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, query string, scanner 
 			return
 		}
 
-		// The req-per-vu query uses $1-$4 twice (for each subquery), so we need
-		// to count how many placeholder sets are needed.
-		args := buildTSArgs(query, domain, test, from, to, interval)
+		var args []any
+		if isLongRange {
+			// Summary queries only use $1-$4 (no interval param)
+			args = []any{domain, test, from, to}
+		} else {
+			args = buildTSArgs(query, domain, test, from, to, interval)
+		}
 
 		rows, err := db.Query(r.Context(), query, args...)
 		if err != nil {
@@ -693,9 +890,9 @@ func tsHandler(db *pgxpool.Pool, rdb *redis.Client, name, query string, scanner 
 	}
 }
 
-// buildTSArgs constructs the query arguments. For the req-per-vu query that
-// references $1-$5 twice, the same arguments are reused (PostgreSQL handles
-// this natively with numbered params).
+// buildTSArgs constructs the query arguments. For the req-per-vu bucket query
+// that references $1-$5 twice, the same arguments are reused (PostgreSQL
+// handles this natively with numbered params).
 func buildTSArgs(query string, domain, test string, from, to time.Time, interval int) []any {
 	// Count max placeholder index used
 	maxIdx := 5
@@ -707,7 +904,6 @@ func buildTSArgs(query string, domain, test string, from, to time.Time, interval
 	if maxIdx == 5 {
 		return []any{domain, test, from, to, float64(interval)}
 	}
-	// Shouldn't happen with current queries, but handle it
 	args := []any{domain, test, from, to, float64(interval)}
 	for i := 6; i <= maxIdx; i++ {
 		args = append(args, args[(i-1)%5])
@@ -735,20 +931,22 @@ func handleTableHTTPRequests(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFu
 SELECT COALESCE(m.url, 'N/A') AS url,
   COALESCE(m.method, 'N/A') AS method,
   COALESCE(m.status, 'N/A') AS status,
-  COUNT(*) AS count,
-  ROUND(AVG(m.metric_value)::numeric, 2) AS avg_ms,
-  ROUND(MIN(m.metric_value)::numeric, 2) AS min_ms,
-  ROUND(MAX(m.metric_value)::numeric, 2) AS max_ms,
-  ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS p90_ms,
-  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS p95_ms,
-  ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY m.metric_value)::numeric, 2) AS p99_ms
-FROM k6_metrics m
+  SUM(m.count)::BIGINT AS count,
+  ROUND((SUM(m.avg_value * m.count) / NULLIF(SUM(m.count), 0))::numeric, 2) AS avg_ms,
+  ROUND(MIN(m.min_value)::numeric, 2) AS min_ms,
+  ROUND(MAX(m.max_value)::numeric, 2) AS max_ms,
+  ROUND(MAX(m.p90)::numeric, 2) AS p90_ms,
+  ROUND(MAX(m.p95)::numeric, 2) AS p95_ms,
+  ROUND(MAX(m.p99)::numeric, 2) AS p99_ms
+FROM k6_metrics_aggregated m
 JOIN tests t ON t.id = m.test_id
 JOIN domains d ON d.id = t.domain_id
+JOIN test_executions e ON e.id = m.execution_id
 WHERE ($1 = '' OR d.name = $1)
   AND ($2 = '' OR t.name = $2)
   AND m.metric_name = 'http_req_duration'
-  AND m.timestamp >= $3 AND m.timestamp <= $4
+  AND m.is_summary = TRUE AND m.url IS NOT NULL
+  AND e.started_at >= $3 AND e.started_at <= $4
 GROUP BY m.url, m.method, m.status
 ORDER BY count DESC`, domain, test, from, to)
 		if err != nil {
@@ -803,15 +1001,17 @@ func handleTableErrors(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
 SELECT COALESCE(m.url, 'N/A') AS url,
   COALESCE(m.method, 'N/A') AS method,
   m.status,
-  SUM(m.metric_value)::int AS count
-FROM k6_metrics m
+  SUM(m.sum_value)::int AS count
+FROM k6_metrics_aggregated m
 JOIN tests t ON t.id = m.test_id
 JOIN domains d ON d.id = t.domain_id
+JOIN test_executions e ON e.id = m.execution_id
 WHERE ($1 = '' OR d.name = $1)
   AND ($2 = '' OR t.name = $2)
   AND m.metric_name = 'http_reqs'
+  AND m.is_summary = TRUE AND m.url IS NOT NULL
   AND m.status NOT IN ('200','201')
-  AND m.timestamp >= $3 AND m.timestamp <= $4
+  AND e.started_at >= $3 AND e.started_at <= $4
 GROUP BY m.url, m.method, m.status
 ORDER BY count DESC`, domain, test, from, to)
 		if err != nil {
@@ -868,12 +1068,17 @@ func handleDashboardOverview(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFu
 		var d dashboardOverview
 		err := db.QueryRow(r.Context(), `
 SELECT
-  COALESCE(SUM(CASE WHEN metric_name = 'http_reqs' THEN metric_value END), 0) AS total_requests,
-  COALESCE(SUM(CASE WHEN metric_name = 'http_reqs' AND status NOT IN ('200','201') THEN metric_value END), 0) AS total_failures,
-  COALESCE(AVG(CASE WHEN metric_name = 'http_req_duration' THEN metric_value END), 0) AS avg_response,
-  COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CASE WHEN metric_name = 'http_req_duration' THEN metric_value END), 0) AS p95,
-  COUNT(*) AS total_data_points
-FROM k6_metrics`).Scan(
+  COALESCE((SELECT SUM(sum_value) FROM k6_metrics_aggregated
+    WHERE is_summary = TRUE AND url IS NULL AND metric_name = 'http_reqs'), 0) AS total_requests,
+  COALESCE((SELECT SUM(sum_value) FROM k6_metrics_aggregated
+    WHERE is_summary = TRUE AND url IS NOT NULL
+    AND metric_name = 'http_reqs' AND status NOT IN ('200','201')), 0) AS total_failures,
+  COALESCE((SELECT SUM(avg_value * count) / NULLIF(SUM(count), 0) FROM k6_metrics_aggregated
+    WHERE is_summary = TRUE AND url IS NULL AND metric_name = 'http_req_duration'), 0) AS avg_response,
+  COALESCE((SELECT MAX(p95) FROM k6_metrics_aggregated
+    WHERE is_summary = TRUE AND url IS NULL AND metric_name = 'http_req_duration'), 0) AS p95,
+  COALESCE((SELECT SUM(count) FROM k6_metrics_aggregated
+    WHERE is_summary = TRUE AND url IS NULL), 0) AS total_data_points`).Scan(
 			&d.TotalRequests, &d.TotalFailures, &d.AvgResponseMs, &d.P95ResponseMs, &d.TotalDataPoints,
 		)
 		if err != nil {
@@ -910,16 +1115,30 @@ func handleDashboardDomain(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc
 
 		var d dashboardOverview
 		err := db.QueryRow(r.Context(), `
+WITH exec_ids AS (
+  SELECT e.id
+  FROM test_executions e
+  JOIN tests t ON t.id = e.test_id
+  JOIN domains d ON d.id = t.domain_id
+  WHERE d.name = $1
+)
 SELECT
-  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' THEN m.metric_value END), 0) AS total_requests,
-  COALESCE(SUM(CASE WHEN m.metric_name = 'http_reqs' AND m.status NOT IN ('200','201') THEN m.metric_value END), 0) AS total_failures,
-  COALESCE(AVG(CASE WHEN m.metric_name = 'http_req_duration' THEN m.metric_value END), 0) AS avg_response,
-  COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CASE WHEN m.metric_name = 'http_req_duration' THEN m.metric_value END), 0) AS p95,
-  COUNT(*) AS total_data_points
-FROM k6_metrics m
-JOIN tests t ON t.id = m.test_id
-JOIN domains d ON d.id = t.domain_id
-WHERE d.name = $1`, name).Scan(
+  COALESCE((SELECT SUM(sum_value) FROM k6_metrics_aggregated
+    WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE AND url IS NULL AND metric_name = 'http_reqs'), 0) AS total_requests,
+  COALESCE((SELECT SUM(sum_value) FROM k6_metrics_aggregated
+    WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE AND url IS NOT NULL
+    AND metric_name = 'http_reqs' AND status NOT IN ('200','201')), 0) AS total_failures,
+  COALESCE((SELECT SUM(avg_value * count) / NULLIF(SUM(count), 0) FROM k6_metrics_aggregated
+    WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE AND url IS NULL AND metric_name = 'http_req_duration'), 0) AS avg_response,
+  COALESCE((SELECT MAX(p95) FROM k6_metrics_aggregated
+    WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE AND url IS NULL AND metric_name = 'http_req_duration'), 0) AS p95,
+  COALESCE((SELECT SUM(count) FROM k6_metrics_aggregated
+    WHERE execution_id IN (SELECT id FROM exec_ids)
+    AND is_summary = TRUE AND url IS NULL), 0) AS total_data_points`, name).Scan(
 			&d.TotalRequests, &d.TotalFailures, &d.AvgResponseMs, &d.P95ResponseMs, &d.TotalDataPoints,
 		)
 		if err != nil {
@@ -1012,25 +1231,30 @@ func handleExecutionStats(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc 
 		}
 
 		query := `
-WITH base AS (
-  SELECT * FROM k6_metrics WHERE execution_id = $1
+WITH summaries AS (
+  SELECT * FROM k6_metrics_aggregated
+  WHERE execution_id = $1 AND is_summary = TRUE
+),
+buckets AS (
+  SELECT * FROM k6_metrics_aggregated
+  WHERE execution_id = $1 AND is_summary = FALSE
 )
 SELECT
-  COALESCE((SELECT SUM(metric_value) FROM base WHERE metric_name = 'http_reqs'), 0) AS requests,
-  COALESCE((SELECT SUM(metric_value) FROM base WHERE metric_name = 'http_reqs' AND status NOT IN ('200','201')), 0) AS failures,
+  COALESCE((SELECT sum_value FROM summaries WHERE metric_name = 'http_reqs' AND url IS NULL LIMIT 1), 0) AS requests,
+  COALESCE((SELECT SUM(sum_value) FROM summaries WHERE metric_name = 'http_reqs' AND url IS NOT NULL AND status NOT IN ('200','201')), 0) AS failures,
   COALESCE((SELECT MAX(rps) FROM (
-    SELECT SUM(metric_value) / 5 AS rps
-    FROM base WHERE metric_name = 'http_reqs'
-    GROUP BY floor(extract(epoch FROM timestamp) / 5)
+    SELECT SUM(sum_value) / 5 AS rps
+    FROM buckets WHERE metric_name = 'http_reqs'
+    GROUP BY floor(extract(epoch FROM bucket_time) / 5)
   ) sub), 0) AS peak_rps,
-  COALESCE((SELECT SUM(CASE WHEN status NOT IN ('200','201') THEN metric_value ELSE 0 END) * 100.0
-    / NULLIF(SUM(metric_value), 0)
-    FROM base WHERE metric_name = 'http_reqs'), 0) AS error_rate,
-  COALESCE((SELECT AVG(metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS avg_response,
-  COALESCE((SELECT PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS p90,
-  COALESCE((SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS p95,
-  COALESCE((SELECT MAX(metric_value) FROM base WHERE metric_name = 'http_req_duration'), 0) AS max_response,
-  COALESCE((SELECT MAX(metric_value) FROM base WHERE metric_name = 'vus_max'), 0) AS vus_max`
+  COALESCE((SELECT SUM(CASE WHEN status NOT IN ('200','201') THEN sum_value ELSE 0 END) * 100.0
+    / NULLIF((SELECT sum_value FROM summaries WHERE metric_name = 'http_reqs' AND url IS NULL LIMIT 1), 0)
+    FROM summaries WHERE metric_name = 'http_reqs' AND url IS NOT NULL), 0) AS error_rate,
+  COALESCE((SELECT avg_value FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL LIMIT 1), 0) AS avg_response,
+  COALESCE((SELECT p90 FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL LIMIT 1), 0) AS p90,
+  COALESCE((SELECT p95 FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL LIMIT 1), 0) AS p95,
+  COALESCE((SELECT max_value FROM summaries WHERE metric_name = 'http_req_duration' AND url IS NULL LIMIT 1), 0) AS max_response,
+  COALESCE((SELECT max_value FROM summaries WHERE metric_name = 'vus_max' AND url IS NULL LIMIT 1), 0) AS vus_max`
 
 		var s statsRow
 		err := db.QueryRow(r.Context(), query, id).Scan(

@@ -159,8 +159,19 @@ func (r *MetricRepository) ComputeExecutionSummary(executionID uuid.UUID) (domai
 	}, nil
 }
 
+func (r *MetricRepository) AggregateAndCleanup(executionID uuid.UUID) error {
+	_, err := r.pool.Exec(context.Background(),
+		`SELECT sp_aggregate_execution_metrics($1)`, executionID)
+	return err
+}
+
 func (r *MetricRepository) DeleteByExecution(executionID uuid.UUID) error {
 	_, err := r.pool.Exec(context.Background(),
+		`DELETE FROM k6_metrics_aggregated WHERE execution_id = $1`, executionID)
+	if err != nil {
+		return err
+	}
+	_, err = r.pool.Exec(context.Background(),
 		`DELETE FROM k6_metrics WHERE execution_id = $1`, executionID)
 	return err
 }
